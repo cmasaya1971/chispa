@@ -1,0 +1,114 @@
+{
+  "_meta": {
+    "descripcion": "Fuente de verdad del demo Chispa. Reconstruido desde el documento maestro (§3.1 y conversaciones validadas §3.3). Todo lo que ve el usuario sale de aquí.",
+    "hoy": "30 jun",
+    "moneda": "GTQ"
+  },
+
+  "sesion": {
+    "autenticada": false
+  },
+
+  "usuario": {
+    "nombreCompleto": "José Manuel García López",
+    "nombreCuenta": "José M. García López",
+    "nombreCorto": "José",
+    "dpi": "2547 89632 0101",
+    "telefono": "+502 5512 8834",
+    "municipio": "Mixco, Guatemala",
+    "ingresoPromedio": 2325
+  },
+
+  "monedero": {
+    "numeroCuenta": "****4821",
+    "nombre": "Monedero Chispa",
+    "saldo": 1250.00
+  },
+
+  "tasaCambio": {
+    "quetzalPorUsd": 7.62,
+    "fuente": "Banguat"
+  },
+
+  "remesa": {
+    "recurrente": {
+      "montoUsd": 300,
+      "remitente": "Rubén García",
+      "origen": "Estados Unidos",
+      "frecuencia": "mensual"
+    },
+    "disponible": {
+      "montoUsd": 300.00,
+      "remitente": "Rubén García",
+      "origen": "Estados Unidos"
+    }
+  },
+
+  "credito": {
+    "lineaAprobada": 3000,
+    "tasaMensual": 0.05,
+    "plazosMeses": [3, 6, 12],
+    "fechaPrimeraCuota": "1 de agosto"
+  },
+
+  "serviciosPendientes": [
+    {
+      "id": "eegsa",
+      "proveedor": "EEGSA",
+      "tipo": "luz",
+      "identificadorTipo": "contador",
+      "identificador": "N-8842137",
+      "monto": 135.00,
+      "vence": "10 jul"
+    },
+    {
+      "id": "empagua",
+      "proveedor": "EMPAGUA",
+      "tipo": "agua",
+      "identificadorTipo": "NIS",
+      "identificador": "0524417",
+      "monto": 96.00,
+      "vence": null
+    }
+  ],
+
+  "contactos": [
+    { "id": "ana", "nombre": "Ana García", "relacion": "hermana", "telefono": "5548-9921" },
+    { "id": "luis", "nombre": "Luis Pérez", "relacion": "amigo", "telefono": null }
+  ],
+
+  "operadoresRecarga": [
+    { "id": "tigo", "nombre": "Tigo" }
+  ],
+
+  "comercio": {
+    "id": "la-bendicion",
+    "nombre": "Tienda La Bendición",
+    "aceptaChispaPay": true,
+    "cobroDemo": {
+      "monto": 450.00,
+      "cuotas3": 162.00,
+      "_nota": "cuotas3 es un valor validado literal; NO recalcular con la tasa del crédito"
+    }
+  },
+
+  "engagement": {
+    "codigoReferido": "JOSE24",
+    "enlaceReferido": "chispa.gt/r/JOSE24",
+    "premioReferido": 30,
+    "cashbackMes": 12,
+    "referidoDemo": { "nombre": "Luis Pérez" }
+  },
+
+  "movimientosRango": "16 al 30 de junio",
+  "movimientos": [
+    { "concepto": "Pago de luz · EEGSA", "fecha": "30 jun", "monto": -120.00 },
+    { "concepto": "Compra · Tienda La Bendición", "fecha": "30 jun", "monto": -300.00 },
+    { "concepto": "Pago de agua · EMPAGUA", "fecha": "29 jun", "monto": -96.00 },
+    { "concepto": "Recarga · Tigo", "fecha": "29 jun", "monto": -50.00 },
+    { "concepto": "Envío a Ana García", "fecha": "28 jun", "monto": -600.00 },
+    { "concepto": "Remesa de Rubén García", "fecha": "28 jun", "monto": 2286.00 }
+  ],
+
+  "creditos": []
+}
