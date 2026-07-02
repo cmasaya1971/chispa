@@ -75,8 +75,12 @@ export const toolSchemas: ToolFn[] = [
   fn("acreditarReferido", "Acredita el premio por referido al monedero.", {}),
   fn("acreditarCashback", "Acredita el cashback del mes al monedero.", {}),
 
-  // ── Sesión ──
-  fn("autenticar", "Valida la identidad del usuario (rostro contra RENAP). Úsalo una vez por sesión antes de la primera acción sensible.", {}),
+  // ── Sesión / autenticación (ceremonia de 3 pasos) ──
+  fn("validarDPI", "Paso 1 de autenticación: valida el número de DPI que envió el usuario contra el registro. NO autentica todavía.", {
+    dpi: { type: "string", description: "Número de DPI que envió el usuario (13 dígitos, con o sin espacios)." },
+  }, ["dpi"]),
+  fn("escanearRostro", "Paso 2 de autenticación: abre la cámara del teléfono para el reconocimiento facial contra RENAP. Llamalo SOLO después de validar el DPI. NO autentica: esperá a que el usuario complete el escaneo.", {}),
+  fn("autenticar", "Paso 3 (final) de autenticación: marca la sesión como validada. Llamalo SOLO cuando el usuario confirme que completó el escaneo facial.", {}),
 ];
 
 // Despacha una tool por nombre. Muta `estado` en sitio y devuelve el resultado.
@@ -101,6 +105,8 @@ export function ejecutarTool(nombre: string, args: Record<string, unknown>, esta
     case "crearCredito": return op.crearCredito(estado, a);
     case "acreditarReferido": return op.acreditarReferido(estado);
     case "acreditarCashback": return op.acreditarCashback(estado);
+    case "validarDPI": return op.validarDPI(estado, a);
+    case "escanearRostro": return op.escanearRostro();
     case "autenticar": return op.autenticar(estado);
     default: return { error: `tool desconocida: ${nombre}` };
   }

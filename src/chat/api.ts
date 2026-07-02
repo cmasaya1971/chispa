@@ -6,6 +6,7 @@ type Respuesta = {
   mensaje: string;
   estado: Estado;
   toolsUsadas?: string[];
+  uiAccion?: string;
   error?: string;
 };
 

@@ -1,9 +1,10 @@
 type Props = {
   children: React.ReactNode;
+  overlay?: React.ReactNode; // capa a pantalla completa dentro del teléfono (ej. FaceScanner)
 };
 
 // Marco de teléfono que contiene toda la demo y da el viewport móvil creíble.
-export function PhoneFrame({ children }: Props) {
+export function PhoneFrame({ children, overlay }: Props) {
   return (
     <div className="flex min-h-full items-center justify-center p-0 sm:p-6">
       <div
@@ -16,6 +17,7 @@ export function PhoneFrame({ children }: Props) {
           <div className="hidden h-6 shrink-0 bg-wa-header sm:block" />
           {children}
         </div>
+        {overlay}
       </div>
     </div>
   );

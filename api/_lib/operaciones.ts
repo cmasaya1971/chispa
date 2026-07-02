@@ -241,9 +241,34 @@ export function acreditarCashback(e: Estado) {
 
 // ── Sesión ────────────────────────────────────────────────────────────────
 
+// Paso 1 de la ceremonia: valida el número de DPI contra el del mock.
+// Compara solo dígitos (tolera espacios/guiones). NO autentica todavía.
+export function validarDPI(e: Estado, args: { dpi?: string }) {
+  const soloDigitos = (s: string) => (s ?? "").replace(/\D/g, "");
+  const ingresado = soloDigitos(args.dpi ?? "");
+  const real = soloDigitos(e.usuario.dpi);
+  const valido = ingresado.length >= 13 && ingresado === real;
+  return {
+    valido,
+    titular: valido ? e.usuario.nombreCompleto : null,
+    motivo: valido ? undefined : ingresado.length < 13 ? "dpi_incompleto" : "dpi_no_coincide",
+  };
+}
+
+// Paso 2 de la ceremonia: pide al cliente abrir la cámara para el reconocimiento
+// facial. Devuelve una señal de UI que el frontend interpreta. NO autentica: hay
+// que esperar a que el usuario complete el escaneo y luego llamar `autenticar`.
+export function escanearRostro() {
+  return {
+    uiAccion: "escaneoRostro",
+    nota: "Se está abriendo la cámara del usuario para validar su rostro contra RENAP. Pedile que mire a la cámara. NO llames autenticar hasta que el usuario confirme que completó el escaneo.",
+  };
+}
+
+// Paso 3 (final): marca la sesión como autenticada tras el escaneo facial.
 export function autenticar(e: Estado) {
   e.sesion.autenticada = true;
-  return { ok: true, autenticada: true, titular: e.usuario.nombreCompleto };
+  return { ok: true, autenticada: true, titular: e.usuario.nombreCompleto, validadoContra: "RENAP" };
 }
 
 export function estadoSesion(e: Estado) {

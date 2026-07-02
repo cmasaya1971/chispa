@@ -4,6 +4,7 @@ import { ChatHeader } from "./ui/ChatHeader";
 import { ChatThread } from "./ui/ChatThread";
 import { ChatInput } from "./ui/ChatInput";
 import { QuickReplies, type QuickReply } from "./ui/QuickReplies";
+import { FaceScanner } from "./ui/FaceScanner";
 import type { Mensaje } from "./chat/tipos";
 import { horaWa } from "./lib/formato";
 import { enviarAChispa, type MensajeChat } from "./chat/api";
@@ -37,12 +38,14 @@ export default function App() {
   const [mensajes, setMensajes] = useState<Mensaje[]>(saludoInicial);
   const [estado, setEstado] = useState<Estado>(() => semilla());
   const [escribiendo, setEscribiendo] = useState(false);
+  const [escaneando, setEscaneando] = useState(false);
 
   function reiniciar() {
     contador = 0;
     setMensajes(saludoInicial());
     setEstado(semilla());
     setEscribiendo(false);
+    setEscaneando(false);
   }
 
   async function responder(textoUsuario: string) {
@@ -61,6 +64,8 @@ export default function App() {
         ...prev,
         { id: nuevoId(), emisor: "chispa", texto: res.mensaje || "…", hora: horaWa() },
       ]);
+      // Señal de UI: abrir la cámara para el reconocimiento facial.
+      if (res.uiAccion === "escaneoRostro") setEscaneando(true);
     } catch (err) {
       setMensajes((prev) => [
         ...prev,
@@ -78,15 +83,30 @@ export default function App() {
     }
   }
 
+  // El usuario completó el escaneo facial → avisamos a Chispa para que finalice.
+  function escaneoCompletado() {
+    setEscaneando(false);
+    responder("Listo, ya validé mi rostro ✅");
+  }
+
+  function escaneoCancelado() {
+    setEscaneando(false);
+    responder("Mejor cancelemos la validación por ahora.");
+  }
+
   return (
-    <PhoneFrame>
+    <PhoneFrame
+      overlay={
+        escaneando ? <FaceScanner onComplete={escaneoCompletado} onCancel={escaneoCancelado} /> : null
+      }
+    >
       <ChatHeader onReiniciar={reiniciar} />
       <ChatThread mensajes={mensajes} escribiendo={escribiendo} />
       <div className="bg-wa-chat-bg">
         {!escribiendo && mensajes.length <= 1 && (
           <QuickReplies opciones={SUGERENCIAS} onElegir={(qr) => responder(qr.label)} />
         )}
-        <ChatInput onEnviar={responder} deshabilitado={escribiendo} />
+        <ChatInput onEnviar={responder} deshabilitado={escribiendo || escaneando} />
       </div>
     </PhoneFrame>
   );

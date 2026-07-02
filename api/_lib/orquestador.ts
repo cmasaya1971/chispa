@@ -17,6 +17,7 @@ export type SalidaChat = {
   mensaje: string;
   estado: Estado;
   toolsUsadas: string[];
+  uiAccion?: string; // señal de UI para el cliente, ej. "escaneoRostro"
 };
 
 const MAX_ITERACIONES = 6;
@@ -37,6 +38,7 @@ export async function procesarChat(entrada: EntradaChat): Promise<SalidaChat> {
   const client = new OpenAI({ apiKey });
   const model = process.env.OPENAI_MODEL || "gpt-4o";
   const toolsUsadas: string[] = [];
+  let uiAccion: string | undefined;
 
   const convo: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: "system", content: systemPrompt(estado) },
@@ -66,6 +68,9 @@ export async function procesarChat(entrada: EntradaChat): Promise<SalidaChat> {
         }
         toolsUsadas.push(tc.function.name);
         const resultado = ejecutarTool(tc.function.name, args, estado);
+        if (resultado && typeof resultado === "object" && "uiAccion" in resultado) {
+          uiAccion = (resultado as { uiAccion?: string }).uiAccion;
+        }
         convo.push({
           role: "tool",
           tool_call_id: tc.id,
@@ -76,7 +81,7 @@ export async function procesarChat(entrada: EntradaChat): Promise<SalidaChat> {
     }
 
     // Respuesta final de texto
-    return { mensaje: msg.content ?? "", estado, toolsUsadas };
+    return { mensaje: msg.content ?? "", estado, toolsUsadas, uiAccion };
   }
 
   return {
