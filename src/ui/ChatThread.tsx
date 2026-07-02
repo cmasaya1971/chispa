@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { Mensaje } from "../chat/tipos";
 import { Bubble } from "./Bubble";
 import { Card } from "./Card";
+import { AdjuntoView } from "./AdjuntoView";
 import { SystemNotice } from "./SystemNotice";
 import { TypingIndicator } from "./TypingIndicator";
 
@@ -24,16 +25,27 @@ export function ChatThread({ mensajes, escribiendo }: Props) {
           m.emisor === "sistema" ? (
             <SystemNotice key={m.id} texto={m.texto} />
           ) : (
-            <Bubble key={m.id} emisor={m.emisor} texto={m.texto} hora={m.hora}>
-              {m.tarjeta && (
-                <Card
-                  titulo={m.tarjeta.titulo}
-                  filas={m.tarjeta.filas}
-                  opciones={m.tarjeta.opciones}
-                  pie={m.tarjeta.pie}
-                />
+            <div key={m.id} className="flex flex-col gap-1">
+              {(m.texto || m.tarjeta) && (
+                <Bubble emisor={m.emisor} texto={m.texto} hora={m.hora}>
+                  {m.tarjeta && (
+                    <Card
+                      titulo={m.tarjeta.titulo}
+                      filas={m.tarjeta.filas}
+                      opciones={m.tarjeta.opciones}
+                      pie={m.tarjeta.pie}
+                    />
+                  )}
+                </Bubble>
               )}
-            </Bubble>
+              {m.adjuntos?.map((a, i) => (
+                <div key={i} className="flex justify-start px-1">
+                  <div className="max-w-[88%]">
+                    <AdjuntoView adjunto={a} />
+                  </div>
+                </div>
+              ))}
+            </div>
           )
         )}
         {escribiendo && <TypingIndicator />}

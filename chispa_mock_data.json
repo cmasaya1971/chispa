@@ -17,7 +17,15 @@
     "dpi": "2547 89632 0101",
     "telefono": "+502 5512 8834",
     "municipio": "Mixco, Guatemala",
-    "ingresoPromedio": 2325
+    "ingresoPromedio": 2325,
+    "renap": {
+      "edad": 36,
+      "fechaNacimiento": "15 de marzo de 1990",
+      "lugarNacimiento": "Mixco, Guatemala",
+      "estadoCivil": "Casado",
+      "nacionalidad": "Guatemalteca",
+      "sexo": "Masculino"
+    }
   },
 
   "monedero": {

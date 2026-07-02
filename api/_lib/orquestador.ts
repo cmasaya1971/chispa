@@ -5,6 +5,8 @@ import OpenAI from "openai";
 import type { Estado } from "../../shared/estado";
 import { systemPrompt } from "./systemPrompt";
 import { toolSchemas, ejecutarTool } from "./tools";
+import { construirAdjuntos } from "./adjuntos";
+import type { Adjunto } from "../../shared/adjuntos";
 
 export type MensajeChat = { role: "user" | "assistant"; content: string };
 
@@ -18,6 +20,7 @@ export type SalidaChat = {
   estado: Estado;
   toolsUsadas: string[];
   uiAccion?: string; // señal de UI para el cliente, ej. "escaneoRostro"
+  adjuntos?: Adjunto[]; // tarjetas estructuradas a renderizar con el mensaje
 };
 
 const MAX_ITERACIONES = 6;
@@ -81,7 +84,13 @@ export async function procesarChat(entrada: EntradaChat): Promise<SalidaChat> {
     }
 
     // Respuesta final de texto
-    return { mensaje: msg.content ?? "", estado, toolsUsadas, uiAccion };
+    return {
+      mensaje: msg.content ?? "",
+      estado,
+      toolsUsadas,
+      uiAccion,
+      adjuntos: construirAdjuntos(toolsUsadas, estado),
+    };
   }
 
   return {

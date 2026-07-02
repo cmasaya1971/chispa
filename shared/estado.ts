@@ -42,6 +42,14 @@ export type Estado = {
     telefono: string;
     municipio: string;
     ingresoPromedio: number;
+    renap: {
+      edad: number;
+      fechaNacimiento: string;
+      lugarNacimiento: string;
+      estadoCivil: string;
+      nacionalidad: string;
+      sexo: string;
+    };
   };
   monedero: { numeroCuenta: string; nombre: string; saldo: number };
   tasaCambio: { quetzalPorUsd: number; fuente: string };

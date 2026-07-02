@@ -70,7 +70,13 @@ export default function App() {
       setEstado(res.estado);
       setMensajes((prev) => [
         ...prev,
-        { id: nuevoId(), emisor: "chispa", texto: res.mensaje || "…", hora: horaWa() },
+        {
+          id: nuevoId(),
+          emisor: "chispa",
+          texto: res.mensaje || "",
+          hora: horaWa(),
+          adjuntos: res.adjuntos,
+        },
       ]);
       // Señal de UI: abrir la cámara para el reconocimiento facial.
       if (res.uiAccion === "escaneoRostro") setEscaneando(true);

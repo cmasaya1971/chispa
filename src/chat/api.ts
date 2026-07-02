@@ -1,4 +1,5 @@
 import type { Estado } from "../../shared/estado";
+import type { Adjunto } from "../../shared/adjuntos";
 
 export type MensajeChat = { role: "user" | "assistant"; content: string };
 
@@ -7,6 +8,7 @@ type Respuesta = {
   estado: Estado;
   toolsUsadas?: string[];
   uiAccion?: string;
+  adjuntos?: Adjunto[];
   error?: string;
 };
 

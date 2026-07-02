@@ -265,10 +265,25 @@ export function escanearRostro() {
   };
 }
 
-// Paso 3 (final): marca la sesión como autenticada tras el escaneo facial.
+// Paso 3 (final): marca la sesión como autenticada tras el escaneo facial y
+// devuelve los datos personales que "RENAP" confirmó (simulación de la respuesta
+// del registro). Estos datos alimentan la tarjeta de identidad.
 export function autenticar(e: Estado) {
   e.sesion.autenticada = true;
-  return { ok: true, autenticada: true, titular: e.usuario.nombreCompleto, validadoContra: "RENAP" };
+  const r = e.usuario.renap;
+  return {
+    ok: true,
+    autenticada: true,
+    validadoContra: "RENAP",
+    titular: e.usuario.nombreCompleto,
+    dpi: e.usuario.dpi,
+    edad: r.edad,
+    fechaNacimiento: r.fechaNacimiento,
+    lugarNacimiento: r.lugarNacimiento,
+    estadoCivil: r.estadoCivil,
+    nacionalidad: r.nacionalidad,
+    sexo: r.sexo,
+  };
 }
 
 export function estadoSesion(e: Estado) {

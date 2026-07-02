@@ -31,7 +31,10 @@
       "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Confirmacion biometrica como aviso de sistema \\(no burbuja de usuario\\) *)",
       "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Tras autenticar, Chispa trata al usuario por nombre y apellido *)",
       "Bash(node \"C:/Users/masay/AppData/Local/Temp/claude/C--Develop-Chispa/0e11d8cf-2227-420d-85c0-eac291db38c1/scratchpad/saldo-auth.mjs\")",
-      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'El saldo y todo dato de cuenta requieren autenticacion la primera vez *)"
+      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'El saldo y todo dato de cuenta requieren autenticacion la primera vez *)",
+      "Bash(node \"C:/Users/masay/AppData/Local/Temp/claude/C--Develop-Chispa/0e11d8cf-2227-420d-85c0-eac291db38c1/scratchpad/tarjetas.mjs\")",
+      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Tarjetas estructuradas: identidad RENAP + estado de cuenta en tabla *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5173/)"
     ]
   }
 }

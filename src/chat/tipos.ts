@@ -1,4 +1,5 @@
 import type { Fila, Opcion } from "../ui/Card";
+import type { Adjunto } from "../../shared/adjuntos";
 
 // Un mensaje renderizable en el hilo. La `tarjeta` es opcional y se pinta dentro
 // de la burbuja de Chispa. El emisor "sistema" se renderiza como aviso centrado
@@ -17,4 +18,5 @@ export type Mensaje = {
     opciones?: Opcion[];
     pie?: string;
   };
+  adjuntos?: Adjunto[];
 };
