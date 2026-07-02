@@ -27,11 +27,20 @@ const SUGERENCIAS: QuickReply[] = [
 ];
 
 // Convierte los mensajes visibles en el historial que consume el backend.
+// Los avisos de "sistema" se envían como turno del usuario usando su `textoIA`
+// (señal interna); si no tienen señal, se omiten del historial.
 function aHistorial(mensajes: Mensaje[]): MensajeChat[] {
-  return mensajes.map((m) => ({
-    role: m.emisor === "chispa" ? "assistant" : "user",
-    content: m.texto,
-  }));
+  const out: MensajeChat[] = [];
+  for (const m of mensajes) {
+    if (m.emisor === "chispa") {
+      out.push({ role: "assistant", content: m.texto });
+    } else if (m.emisor === "usuario") {
+      out.push({ role: "user", content: m.texto });
+    } else if (m.textoIA) {
+      out.push({ role: "user", content: m.textoIA });
+    }
+  }
+  return out;
 }
 
 export default function App() {
@@ -48,17 +57,16 @@ export default function App() {
     setEscaneando(false);
   }
 
-  async function responder(textoUsuario: string) {
-    const t = textoUsuario.trim();
-    if (!t || escribiendo) return;
-
-    const mensajeUsuario: Mensaje = { id: nuevoId(), emisor: "usuario", texto: t, hora: horaWa() };
-    const conUsuario = [...mensajes, mensajeUsuario];
-    setMensajes(conUsuario);
+  // Núcleo de un turno: agrega uno o más mensajes visibles, manda el historial
+  // a Chispa y añade su respuesta.
+  async function procesarTurno(nuevos: Mensaje[]) {
+    if (escribiendo || nuevos.length === 0) return;
+    const conNuevos = [...mensajes, ...nuevos];
+    setMensajes(conNuevos);
     setEscribiendo(true);
 
     try {
-      const res = await enviarAChispa(aHistorial(conUsuario), estado);
+      const res = await enviarAChispa(aHistorial(conNuevos), estado);
       setEstado(res.estado);
       setMensajes((prev) => [
         ...prev,
@@ -83,15 +91,40 @@ export default function App() {
     }
   }
 
-  // El usuario completó el escaneo facial → avisamos a Chispa para que finalice.
+  function responder(textoUsuario: string) {
+    const t = textoUsuario.trim();
+    if (!t) return;
+    procesarTurno([{ id: nuevoId(), emisor: "usuario", texto: t, hora: horaWa() }]);
+  }
+
+  // El usuario completó el escaneo facial. Mostramos un aviso de SISTEMA (no una
+  // burbuja del usuario) y le pasamos a la IA una señal interna para finalizar.
   function escaneoCompletado() {
     setEscaneando(false);
-    responder("Listo, ya validé mi rostro ✅");
+    procesarTurno([
+      {
+        id: nuevoId(),
+        emisor: "sistema",
+        texto:
+          "Validación biométrica completada con éxito. Tu identidad fue contrastada con la base de datos del **RENAP**.",
+        textoIA:
+          "[Evento del sistema: la validación biométrica facial se completó con éxito y la identidad del usuario fue contrastada satisfactoriamente contra la base de datos del RENAP.]",
+        hora: horaWa(),
+      },
+    ]);
   }
 
   function escaneoCancelado() {
     setEscaneando(false);
-    responder("Mejor cancelemos la validación por ahora.");
+    procesarTurno([
+      {
+        id: nuevoId(),
+        emisor: "sistema",
+        texto: "Validación biométrica cancelada.",
+        textoIA: "[Evento del sistema: el usuario canceló la validación biométrica.]",
+        hora: horaWa(),
+      },
+    ]);
   }
 
   return (
