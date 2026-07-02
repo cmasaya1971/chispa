@@ -35,7 +35,19 @@
       "Bash(node \"C:/Users/masay/AppData/Local/Temp/claude/C--Develop-Chispa/0e11d8cf-2227-420d-85c0-eac291db38c1/scratchpad/tarjetas.mjs\")",
       "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Tarjetas estructuradas: identidad RENAP + estado de cuenta en tabla *)",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5173/)",
-      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'FaceScanner: captura biometrica de rostro + barra de progreso RENAP *)"
+      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'FaceScanner: captura biometrica de rostro + barra de progreso RENAP *)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(gh auth *)",
+      "Bash(git push *)",
+      "Bash(git rev-list *)",
+      "Bash(awk '{print \"detras:\"$1\" adelante:\"$2}')",
+      "Bash(git -c user.name=\"Chispa Demo\" -c user.email=\"demo@chispa.local\" commit -q -m \"Prep deploy: ignora *.tsbuildinfo \\(artefacto de tsc -b\\)\")",
+      "Bash(curl -s -o /dev/null -w 'HTTP %{http_code} · %{content_type}\\\\n' https://chispa-7srcedpnf-carlosmasaya-5507s-projects.vercel.app/)",
+      "Bash(curl -s -X POST https://chispa-7srcedpnf-carlosmasaya-5507s-projects.vercel.app/api/chat -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"hola\"}],\"estado\":{\"usuario\":{\"nombreCorto\":\"Jose\"}}}' -w '\\\\n[HTTP %{http_code} · %{content_type}]\\\\n')",
+      "Bash(node \"C:/Users/masay/AppData/Local/Temp/claude/C--Develop-Chispa/0e11d8cf-2227-420d-85c0-eac291db38c1/scratchpad/probar-deploy.mjs\")",
+      "Bash(node \"C:/Users/masay/AppData/Local/Temp/claude/C--Develop-Chispa/0e11d8cf-2227-420d-85c0-eac291db38c1/scratchpad/confirmar.mjs\")",
+      "Bash(git -c user.name=\"Chispa Demo\" -c user.email=\"demo@chispa.local\" commit -q -m \"Diagnostico: /api/chat devuelve el error real \\(import dinamico + detalle\\)\")"
     ]
   }
 }
