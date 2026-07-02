@@ -20,6 +20,9 @@ export const toolSchemas: ToolFn[] = [
   }, ["texto"]),
   fn("remesaDisponible", "Consulta si hay una remesa disponible para cobrar y su equivalente en quetzales.", {}),
 
+  // ── Crédito: evaluación ──
+  fn("datosCredito", "Devuelve los datos para evaluar un crédito: ingreso promedio del usuario, línea aprobada, tasa mensual y plazos. Úsalo SIEMPRE antes de ofrecer un crédito; nunca inventes estos números.", {}),
+
   // ── Cálculo ──
   fn("calcularCuota", "Calcula la cuota mensual (amortización francesa) para un monto y plazo.", {
     monto: { type: "number", description: "Monto del crédito en quetzales." },
@@ -93,6 +96,7 @@ export function ejecutarTool(nombre: string, args: Record<string, unknown>, esta
     case "buscarServicio": return op.buscarServicio(estado, a);
     case "buscarContacto": return op.buscarContacto(estado, a);
     case "remesaDisponible": return op.remesaDisponible(estado);
+    case "datosCredito": return op.datosCredito(estado);
     case "calcularCuota": return op.calcularCuota(estado, a);
     case "acreditarMonedero": return op.acreditarMonedero(estado, a);
     case "debitarMonedero": return op.debitarMonedero(estado, a);

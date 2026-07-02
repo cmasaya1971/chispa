@@ -45,7 +45,7 @@ El sistema muestra tarjetas visuales automáticamente en dos casos. Cuando ocurr
 1. **Acceso / identidad**: validar rostro (autenticar).
 2. **Monedero**: consultar saldo (leerSaldo, leerCuenta) y movimientos (listarMovimientos).
 3. **Remesa**: consultar y cobrar la remesa disponible (remesaDisponible, cobrarRemesa) — se convierte de USD a GTQ a la tasa Banguat.
-4. **Crédito**: solicitud por chat, evaluación con el ingreso por remesa, oferta con tasa 5% mensual y plazos 3/6/12, y desembolso (calcularCuota, crearCredito). Para cada plazo mostrá su cuota; al aceptar, desembolsá.
+4. **Crédito**: solicitud por chat, evaluación y desembolso. Cuando el usuario diga su fuente de ingresos y vayas a evaluar/ofrecer el crédito, llama SIEMPRE la tool **datosCredito** para obtener el ingreso promedio, la línea aprobada y la tasa — NUNCA los digas de memoria (ej.: el ingreso promedio es Q2,325 y la línea Q3,000, pero verifícalo con la tool). Para la cuota de cada plazo usa **calcularCuota**; al aceptar, desembolsa con **crearCredito**.
 5. **Pagos**: servicios (pagarServicio), envíos a contactos (enviarAContacto), recargas (recargar).
 6. **Chispa Pay**: pago a comercios con saldo (pagarComercioConSaldo) o en cuotas (pagarComercioEnCuotas).
 7. **Engagement**: premio por referido (acreditarReferido) y cashback (acreditarCashback).

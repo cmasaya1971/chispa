@@ -82,6 +82,21 @@ export function remesaDisponible(e: Estado) {
 
 // ── Cálculo ──────────────────────────────────────────────────────────────
 
+// Datos para evaluar el crédito (ingreso promedio, línea aprobada, tasa, plazos).
+// Todos salen del mock, para que la IA NUNCA los invente.
+export function datosCredito(e: Estado) {
+  const pct = Math.round(e.credito.tasaMensual * 100);
+  return {
+    ingresoPromedio: e.usuario.ingresoPromedio,
+    ingresoPromedioQ0: fmtQ0(e.usuario.ingresoPromedio),
+    lineaAprobada: e.credito.lineaAprobada,
+    lineaAprobadaQ0: fmtQ0(e.credito.lineaAprobada),
+    tasaMensual: e.credito.tasaMensual,
+    tasaMensualTexto: `${pct}% mensual`,
+    plazosMeses: e.credito.plazosMeses,
+  };
+}
+
 /** Amortización francesa (cuota fija). Redondeo a entero Q. */
 export function calcularCuota(e: Estado, args: { monto: number; plazoMeses: number; tasaMensual?: number }) {
   const i = args.tasaMensual ?? e.credito.tasaMensual;

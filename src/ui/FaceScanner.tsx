@@ -32,7 +32,7 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
   const streamRef = useRef<MediaStream | null>(null);
   const [fase, setFase] = useState<Fase>("iniciando");
   const [hayCamara, setHayCamara] = useState(false);
-  const [imgError, setImgError] = useState(false);
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null); // foto real capturada por la cámara
 
   // Líneas de la malla facial (pares de índices de LANDMARKS).
   const MESH = [
@@ -69,9 +69,22 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
       timers.push(
         window.setTimeout(() => {
           if (cancelado) return;
+          // Toma la FOTO REAL: dibuja el frame actual de la cámara en un canvas.
+          const v = videoRef.current;
+          if (v && v.videoWidth > 0) {
+            const canvas = document.createElement("canvas");
+            canvas.width = v.videoWidth;
+            canvas.height = v.videoHeight;
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              // Espeja igual que el video mostrado (transform scaleX(-1)).
+              ctx.translate(canvas.width, 0);
+              ctx.scale(-1, 1);
+              ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+              setFotoUrl(canvas.toDataURL("image/jpeg", 0.85));
+            }
+          }
           setFase("capturado");
-          // Congela la imagen (la "foto" tomada).
-          videoRef.current?.pause();
         }, T_CAPTURA)
       );
       timers.push(window.setTimeout(() => !cancelado && setFase("renap"), T_CAPTURA + T_FLASH));
@@ -107,7 +120,11 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
 
       {/* Marco de la cámara con óvalo de rostro */}
       <div className="relative h-64 w-56 overflow-hidden rounded-[45%] border-2 border-wa-brand/70 bg-white/5">
-        {hayCamara ? (
+        {fotoUrl ? (
+          // Foto REAL tomada por la cámara (se mantiene durante RENAP y confirmación).
+          <img src={fotoUrl} alt="Foto capturada" className="h-full w-full object-cover" />
+        ) : hayCamara ? (
+          // Cámara en vivo (el rostro real de la persona).
           <video
             ref={videoRef}
             playsInline
@@ -115,15 +132,8 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
             className="h-full w-full object-cover"
             style={{ transform: "scaleX(-1)" }}
           />
-        ) : !imgError ? (
-          // Respaldo sin cámara: retrato de la persona.
-          <img
-            src="https://randomuser.me/api/portraits/men/32.jpg"
-            alt="Rostro"
-            onError={() => setImgError(true)}
-            className="h-full w-full object-cover"
-          />
         ) : (
+          // Sin cámara: silueta.
           <div className="flex h-full w-full items-center justify-center">
             <svg viewBox="0 0 100 100" className="h-32 w-32 fill-white/25">
               <circle cx="50" cy="36" r="20" />
@@ -198,7 +208,7 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
         {fase === "iniciando" && <span className="text-[14px] text-white/70">Abriendo la cámara…</span>}
 
         {fase === "capturando" && (
-          <span className="text-[14px] text-white/90">Capturando datos biométricos… mirá a la cámara</span>
+          <span className="text-[14px] text-white/90">Capturando datos biométricos… mira a la cámara</span>
         )}
 
         {fase === "capturado" && (
