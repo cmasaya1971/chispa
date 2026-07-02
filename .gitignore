@@ -4,6 +4,7 @@ node_modules/
 # Build
 dist/
 dist-ssr/
+*.tsbuildinfo
 
 # Variables de entorno — NUNCA subir la API key
 .env
