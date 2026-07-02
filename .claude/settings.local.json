@@ -28,7 +28,8 @@
       "Bash(curl -s -o /dev/null -w \"raiz: HTTP %{http_code}\\\\n\" \"http://localhost:59640/\")",
       "Bash(curl -s \"http://localhost:59640/?scan=1\")",
       "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Autenticacion realista: ceremonia DPI + escaneo facial con camara *)",
-      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Confirmacion biometrica como aviso de sistema \\(no burbuja de usuario\\) *)"
+      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Confirmacion biometrica como aviso de sistema \\(no burbuja de usuario\\) *)",
+      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Tras autenticar, Chispa trata al usuario por nombre y apellido *)"
     ]
   }
 }

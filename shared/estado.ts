@@ -36,6 +36,7 @@ export type Estado = {
   usuario: {
     nombreCompleto: string;
     nombreCuenta: string;
+    nombreApellido: string;
     nombreCorto: string;
     dpi: string;
     telefono: string;
