@@ -6,20 +6,17 @@ import { ChatInput } from "./ui/ChatInput";
 import { QuickReplies, type QuickReply } from "./ui/QuickReplies";
 import type { Mensaje } from "./chat/tipos";
 import { horaWa } from "./lib/formato";
+import { enviarAChispa, type MensajeChat } from "./chat/api";
+import { semilla, type Estado } from "../shared/estado";
 
 let contador = 0;
 const nuevoId = () => `m${contador++}`;
 
-// Saludo inicial de Chispa (placeholder de Nivel 2 · paso 2: aún sin OpenAI).
+const TEXTO_SALUDO =
+  "¡Hola, José! 👋 Soy **Chispa**, de Banco GyT Continental. ¿En qué te ayudo hoy?";
+
 function saludoInicial(): Mensaje[] {
-  return [
-    {
-      id: nuevoId(),
-      emisor: "chispa",
-      texto: "¡Hola, José! 👋 Soy **Chispa**, de Banco GyT Continental. ¿En qué te ayudo hoy?",
-      hora: horaWa(),
-    },
-  ];
+  return [{ id: nuevoId(), emisor: "chispa", texto: TEXTO_SALUDO, hora: horaWa() }];
 }
 
 const SUGERENCIAS: QuickReply[] = [
@@ -28,38 +25,57 @@ const SUGERENCIAS: QuickReply[] = [
   { id: "pagar", label: "Pagar un servicio" },
 ];
 
+// Convierte los mensajes visibles en el historial que consume el backend.
+function aHistorial(mensajes: Mensaje[]): MensajeChat[] {
+  return mensajes.map((m) => ({
+    role: m.emisor === "chispa" ? "assistant" : "user",
+    content: m.texto,
+  }));
+}
+
 export default function App() {
   const [mensajes, setMensajes] = useState<Mensaje[]>(saludoInicial);
+  const [estado, setEstado] = useState<Estado>(() => semilla());
   const [escribiendo, setEscribiendo] = useState(false);
 
   function reiniciar() {
     contador = 0;
     setMensajes(saludoInicial());
+    setEstado(semilla());
     setEscribiendo(false);
   }
 
-  // Placeholder: hace eco con la voz de Chispa. En el paso 3 se reemplaza por
-  // la llamada real a /api/chat (OpenAI + tools).
-  function responder(textoUsuario: string) {
-    setMensajes((prev) => [
-      ...prev,
-      { id: nuevoId(), emisor: "usuario", texto: textoUsuario, hora: horaWa() },
-    ]);
+  async function responder(textoUsuario: string) {
+    const t = textoUsuario.trim();
+    if (!t || escribiendo) return;
+
+    const mensajeUsuario: Mensaje = { id: nuevoId(), emisor: "usuario", texto: t, hora: horaWa() };
+    const conUsuario = [...mensajes, mensajeUsuario];
+    setMensajes(conUsuario);
     setEscribiendo(true);
-    const espera = Math.min(1200, 600 + textoUsuario.length * 12);
-    window.setTimeout(() => {
-      setEscribiendo(false);
+
+    try {
+      const res = await enviarAChispa(aHistorial(conUsuario), estado);
+      setEstado(res.estado);
+      setMensajes((prev) => [
+        ...prev,
+        { id: nuevoId(), emisor: "chispa", texto: res.mensaje || "…", hora: horaWa() },
+      ]);
+    } catch (err) {
       setMensajes((prev) => [
         ...prev,
         {
           id: nuevoId(),
           emisor: "chispa",
           texto:
-            "¡Con gusto! Todavía estoy conectando mi cerebro (OpenAI) — en el siguiente paso te respondo de verdad. Mientras, la interfaz ya se ve como WhatsApp. 😉",
+            "Disculpá, tuve un problema para responder. Revisá que la API key esté configurada e intentá de nuevo.",
           hora: horaWa(),
         },
       ]);
-    }, espera);
+      console.error(err);
+    } finally {
+      setEscribiendo(false);
+    }
   }
 
   return (
@@ -67,12 +83,8 @@ export default function App() {
       <ChatHeader onReiniciar={reiniciar} />
       <ChatThread mensajes={mensajes} escribiendo={escribiendo} />
       <div className="bg-wa-chat-bg">
-        {!escribiendo && (
-          <QuickReplies
-            opciones={SUGERENCIAS}
-            onElegir={(qr) => responder(qr.label)}
-            deshabilitado={escribiendo}
-          />
+        {!escribiendo && mensajes.length <= 1 && (
+          <QuickReplies opciones={SUGERENCIAS} onElegir={(qr) => responder(qr.label)} />
         )}
         <ChatInput onEnviar={responder} deshabilitado={escribiendo} />
       </div>

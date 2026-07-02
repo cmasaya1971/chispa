@@ -7,7 +7,10 @@
       "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Checkpoint inicial: spec pack determinista \\(pre-Nivel 2\\) *)",
       "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Migra CLAUDE.md a arquitectura Nivel 2 \\(IA generativa + OpenAI\\) *)",
       "Bash(npm install *)",
-      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Paso 2: andamiaje React+Vite+TS+Tailwind + kit de UI de WhatsApp *)"
+      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Paso 2: andamiaje React+Vite+TS+Tailwind + kit de UI de WhatsApp *)",
+      "Bash(npx tsc *)",
+      "Bash(curl -s -X POST http://localhost:5173/api/chat -H \"Content-Type: application/json\" -d '{\"messages\":[{\"role\":\"user\",\"content\":\"hola\"}],\"estado\":{\"usuario\":{\"nombreCorto\":\"José\"}}}')",
+      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Pasos 3-4: orquestador OpenAI + tools de grounding *)"
     ]
   }
 }
