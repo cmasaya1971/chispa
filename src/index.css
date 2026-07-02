@@ -42,6 +42,25 @@ body {
   100% { transform: translateY(0); }
 }
 
+/* Puntos biométricos (landmarks) que "capturan" rasgos faciales */
+@keyframes bio-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.25); }
+}
+
+/* Flash al capturar la imagen */
+@keyframes bio-flash {
+  0% { opacity: 0; }
+  40% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+/* Barra de progreso "Obteniendo información de RENAP" */
+@keyframes renap-progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
 /* Scrollbar discreta en el hilo */
 .wa-thread::-webkit-scrollbar { width: 6px; }
 .wa-thread::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
