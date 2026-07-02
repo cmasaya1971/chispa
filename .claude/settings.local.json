@@ -5,7 +5,9 @@
       "Bash(git init *)",
       "Bash(git add *)",
       "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Checkpoint inicial: spec pack determinista \\(pre-Nivel 2\\) *)",
-      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Migra CLAUDE.md a arquitectura Nivel 2 \\(IA generativa + OpenAI\\) *)"
+      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Migra CLAUDE.md a arquitectura Nivel 2 \\(IA generativa + OpenAI\\) *)",
+      "Bash(npm install *)",
+      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Paso 2: andamiaje React+Vite+TS+Tailwind + kit de UI de WhatsApp *)"
     ]
   }
 }

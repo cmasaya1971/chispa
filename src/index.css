@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  /* Fondo neutro fuera del teléfono, para que el PhoneFrame resalte */
+  background: #d1d7db;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Patrón sutil del fondo del chat de WhatsApp */
+.wa-chat-pattern {
+  background-color: #ece5dd;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Cpath d='M30 30l6-6-6-6-6 6z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Animación de los puntos "escribiendo…" */
+@keyframes wa-typing {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+.wa-dot {
+  animation: wa-typing 1.2s infinite ease-in-out;
+}
+
+/* Scrollbar discreta en el hilo */
+.wa-thread::-webkit-scrollbar { width: 6px; }
+.wa-thread::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
