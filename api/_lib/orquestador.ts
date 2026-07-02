@@ -3,9 +3,9 @@
 import "dotenv/config";
 import OpenAI from "openai";
 import type { Estado } from "../../shared/estado";
-import { systemPrompt } from "./systemPrompt";
-import { toolSchemas, ejecutarTool } from "./tools";
-import { construirAdjuntos } from "./adjuntos";
+import { systemPrompt } from "./systemPrompt.js";
+import { toolSchemas, ejecutarTool } from "./tools.js";
+import { construirAdjuntos } from "./adjuntos.js";
 import type { Adjunto } from "../../shared/adjuntos";
 
 export type MensajeChat = { role: "user" | "assistant"; content: string };

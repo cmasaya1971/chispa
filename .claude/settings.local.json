@@ -47,7 +47,9 @@
       "Bash(curl -s -X POST https://chispa-7srcedpnf-carlosmasaya-5507s-projects.vercel.app/api/chat -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"hola\"}],\"estado\":{\"usuario\":{\"nombreCorto\":\"Jose\"}}}' -w '\\\\n[HTTP %{http_code} · %{content_type}]\\\\n')",
       "Bash(node \"C:/Users/masay/AppData/Local/Temp/claude/C--Develop-Chispa/0e11d8cf-2227-420d-85c0-eac291db38c1/scratchpad/probar-deploy.mjs\")",
       "Bash(node \"C:/Users/masay/AppData/Local/Temp/claude/C--Develop-Chispa/0e11d8cf-2227-420d-85c0-eac291db38c1/scratchpad/confirmar.mjs\")",
-      "Bash(git -c user.name=\"Chispa Demo\" -c user.email=\"demo@chispa.local\" commit -q -m \"Diagnostico: /api/chat devuelve el error real \\(import dinamico + detalle\\)\")"
+      "Bash(git -c user.name=\"Chispa Demo\" -c user.email=\"demo@chispa.local\" commit -q -m \"Diagnostico: /api/chat devuelve el error real \\(import dinamico + detalle\\)\")",
+      "Bash(node \"C:/Users/masay/AppData/Local/Temp/claude/C--Develop-Chispa/0e11d8cf-2227-420d-85c0-eac291db38c1/scratchpad/poll.mjs\")",
+      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Fix deploy Vercel: extension .js en imports del servidor \\(ESM nativo\\) *)"
     ]
   }
 }

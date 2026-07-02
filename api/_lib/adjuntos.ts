@@ -3,7 +3,7 @@
 // del mock, no del texto de la IA.
 import type { Estado } from "../../shared/estado";
 import type { Adjunto } from "../../shared/adjuntos";
-import { fmtQ2 } from "../../shared/formato";
+import { fmtQ2 } from "../../shared/formato.js";
 
 export function construirAdjuntos(toolsUsadas: string[], estado: Estado): Adjunto[] {
   const adjuntos: Adjunto[] = [];

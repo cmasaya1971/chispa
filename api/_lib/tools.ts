@@ -2,7 +2,7 @@
 // ejecuta contra el estado. Es la ÚNICA vía por la que la IA lee o muta datos.
 import type OpenAI from "openai";
 import type { Estado } from "../../shared/estado";
-import * as op from "./operaciones";
+import * as op from "./operaciones.js";
 
 type ToolFn = OpenAI.Chat.Completions.ChatCompletionTool;
 

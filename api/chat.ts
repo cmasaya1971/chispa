@@ -8,7 +8,7 @@ export default async function handler(req: any, res: any) {
     return;
   }
   try {
-    const { procesarChat } = await import("./_lib/orquestador");
+    const { procesarChat } = await import("./_lib/orquestador.js");
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body ?? {};
     const salida = await procesarChat(body);
     res.status(200).json(salida);

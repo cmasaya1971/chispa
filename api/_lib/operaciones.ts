@@ -3,7 +3,7 @@
 // Las de lectura devuelven montos ya formateados (Q0 y Q2) para que la IA use
 // la cadena exacta sin re-formatear. Las de mutación cambian `estado` en sitio.
 import type { Estado } from "../../shared/estado";
-import { fmtQ0, fmtQ2 } from "../../shared/formato";
+import { fmtQ0, fmtQ2 } from "../../shared/formato.js";
 
 const norm = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
