@@ -13,7 +13,7 @@ const T_FLASH = 500;
 const T_RENAP = 2600;
 const T_CONFIRMA = 1000;
 
-// Posiciones de los "puntos biométricos" sobre el rostro (%). Fake de captura.
+// Posiciones de los "puntos biométricos" sobre el rostro (%).
 const LANDMARKS = [
   { x: 36, y: 40 }, // ojo izq
   { x: 64, y: 40 }, // ojo der
@@ -24,21 +24,21 @@ const LANDMARKS = [
   { x: 50, y: 82 }, // mentón
 ];
 
-// Overlay de reconocimiento facial contra RENAP. Usa la cámara real del teléfono
-// (getUserMedia); si no hay cámara o se niega el permiso, cae en una silueta
-// simulada. Secuencia: captura biométrica → foto → consulta a RENAP → confirmado.
+// Líneas de la malla facial (pares de índices de LANDMARKS).
+const MESH = [
+  [5, 0], [5, 1], [0, 1], [0, 2], [1, 2],
+  [2, 3], [2, 4], [3, 4], [3, 6], [4, 6],
+];
+
+// Overlay de reconocimiento facial contra RENAP. Muestra la cámara REAL del
+// teléfono; al capturar, congela el frame (pause) = la foto real de la persona.
+// Si no hay cámara/permiso, cae en una silueta. Secuencia:
+// captura biométrica → foto → consulta a RENAP → confirmado.
 export function FaceScanner({ onComplete, onCancel }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [fase, setFase] = useState<Fase>("iniciando");
   const [hayCamara, setHayCamara] = useState(false);
-  const [fotoUrl, setFotoUrl] = useState<string | null>(null); // foto real capturada por la cámara
-
-  // Líneas de la malla facial (pares de índices de LANDMARKS).
-  const MESH = [
-    [5, 0], [5, 1], [0, 1], [0, 2], [1, 2],
-    [2, 3], [2, 4], [3, 4], [3, 6], [4, 6],
-  ];
 
   useEffect(() => {
     let cancelado = false;
@@ -55,6 +55,7 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
           return;
         }
         streamRef.current = stream;
+        // El <video> está SIEMPRE montado, así que el ref ya existe aquí.
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play().catch(() => {});
@@ -69,21 +70,8 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
       timers.push(
         window.setTimeout(() => {
           if (cancelado) return;
-          // Toma la FOTO REAL: dibuja el frame actual de la cámara en un canvas.
-          const v = videoRef.current;
-          if (v && v.videoWidth > 0) {
-            const canvas = document.createElement("canvas");
-            canvas.width = v.videoWidth;
-            canvas.height = v.videoHeight;
-            const ctx = canvas.getContext("2d");
-            if (ctx) {
-              // Espeja igual que el video mostrado (transform scaleX(-1)).
-              ctx.translate(canvas.width, 0);
-              ctx.scale(-1, 1);
-              ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-              setFotoUrl(canvas.toDataURL("image/jpeg", 0.85));
-            }
-          }
+          // Toma la FOTO: congela el frame real de la cámara (queda visible).
+          videoRef.current?.pause();
           setFase("capturado");
         }, T_CAPTURA)
       );
@@ -120,20 +108,19 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
 
       {/* Marco de la cámara con óvalo de rostro */}
       <div className="relative h-64 w-56 overflow-hidden rounded-[45%] border-2 border-wa-brand/70 bg-white/5">
-        {fotoUrl ? (
-          // Foto REAL tomada por la cámara (se mantiene durante RENAP y confirmación).
-          <img src={fotoUrl} alt="Foto capturada" className="h-full w-full object-cover" />
-        ) : hayCamara ? (
-          // Cámara en vivo (el rostro real de la persona).
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            className="h-full w-full object-cover"
-            style={{ transform: "scaleX(-1)" }}
-          />
-        ) : (
-          // Sin cámara: silueta.
+        {/* Video SIEMPRE montado (para que el ref exista al asignar la cámara).
+            Se oculta si no hay cámara. Al capturar se pausa = foto real congelada. */}
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          autoPlay
+          className={`h-full w-full object-cover ${hayCamara ? "" : "hidden"}`}
+          style={{ transform: "scaleX(-1)" }}
+        />
+
+        {/* Silueta si no hay cámara */}
+        {!hayCamara && (
           <div className="flex h-full w-full items-center justify-center">
             <svg viewBox="0 0 100 100" className="h-32 w-32 fill-white/25">
               <circle cx="50" cy="36" r="20" />
@@ -164,7 +151,7 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
           </svg>
         )}
 
-        {/* Puntos biométricos sobre el rostro (captura de rasgos) */}
+        {/* Puntos biométricos sobre el rostro */}
         {capturandoOFoto &&
           LANDMARKS.map((p, i) => (
             <span
@@ -188,7 +175,7 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
           <div className="pointer-events-none absolute inset-0 animate-[bio-flash_0.5s_ease-out] bg-white" />
         )}
 
-        {/* Consulta a RENAP: velo oscuro */}
+        {/* Consulta a RENAP: velo oscuro sobre la foto congelada */}
         {fase === "renap" && <div className="absolute inset-0 bg-black/45" />}
 
         {/* Check de confirmación */}
@@ -211,9 +198,7 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
           <span className="text-[14px] text-white/90">Capturando datos biométricos… mira a la cámara</span>
         )}
 
-        {fase === "capturado" && (
-          <span className="text-[14px] text-white/90">Imagen capturada ✓</span>
-        )}
+        {fase === "capturado" && <span className="text-[14px] text-white/90">Imagen capturada ✓</span>}
 
         {fase === "renap" && (
           <div>
