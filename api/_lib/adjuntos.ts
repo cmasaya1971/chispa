@@ -17,12 +17,9 @@ export function construirAdjuntos(toolsUsadas: string[], estado: Estado): Adjunt
       titulo: "Identidad confirmada con RENAP",
       filas: [
         { etiqueta: "Nombre", valor: u.nombreCompleto },
-        { etiqueta: "DPI", valor: u.dpi },
-        { etiqueta: "Edad", valor: `${r.edad} años` },
         { etiqueta: "Fecha de nacimiento", valor: r.fechaNacimiento },
-        { etiqueta: "Lugar de nacimiento", valor: r.lugarNacimiento },
         { etiqueta: "Estado civil", valor: r.estadoCivil },
-        { etiqueta: "Nacionalidad", valor: r.nacionalidad },
+        { etiqueta: "Lugar de nacimiento", valor: r.lugarNacimiento },
       ],
     });
   }

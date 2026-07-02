@@ -26,6 +26,16 @@ export function ChatThread({ mensajes, escribiendo }: Props) {
             <SystemNotice key={m.id} texto={m.texto} />
           ) : (
             <div key={m.id} className="flex flex-col gap-1">
+              {/* La identidad (confirmación) va ANTES del mensaje; el resto después. */}
+              {m.adjuntos
+                ?.filter((a) => a.tipo === "identidad")
+                .map((a, i) => (
+                  <div key={`id-${i}`} className="flex justify-start px-1">
+                    <div className="max-w-[88%]">
+                      <AdjuntoView adjunto={a} />
+                    </div>
+                  </div>
+                ))}
               {(m.texto || m.tarjeta) && (
                 <Bubble emisor={m.emisor} texto={m.texto} hora={m.hora}>
                   {m.tarjeta && (
@@ -38,13 +48,15 @@ export function ChatThread({ mensajes, escribiendo }: Props) {
                   )}
                 </Bubble>
               )}
-              {m.adjuntos?.map((a, i) => (
-                <div key={i} className="flex justify-start px-1">
-                  <div className="max-w-[88%]">
-                    <AdjuntoView adjunto={a} />
+              {m.adjuntos
+                ?.filter((a) => a.tipo !== "identidad")
+                .map((a, i) => (
+                  <div key={`otro-${i}`} className="flex justify-start px-1">
+                    <div className="max-w-[88%]">
+                      <AdjuntoView adjunto={a} />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           )
         )}

@@ -32,6 +32,13 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
   const streamRef = useRef<MediaStream | null>(null);
   const [fase, setFase] = useState<Fase>("iniciando");
   const [hayCamara, setHayCamara] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  // Líneas de la malla facial (pares de índices de LANDMARKS).
+  const MESH = [
+    [5, 0], [5, 1], [0, 1], [0, 2], [1, 2],
+    [2, 3], [2, 4], [3, 4], [3, 6], [4, 6],
+  ];
 
   useEffect(() => {
     let cancelado = false;
@@ -108,6 +115,14 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
             className="h-full w-full object-cover"
             style={{ transform: "scaleX(-1)" }}
           />
+        ) : !imgError ? (
+          // Respaldo sin cámara: retrato de la persona.
+          <img
+            src="https://randomuser.me/api/portraits/men/32.jpg"
+            alt="Rostro"
+            onError={() => setImgError(true)}
+            className="h-full w-full object-cover"
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <svg viewBox="0 0 100 100" className="h-32 w-32 fill-white/25">
@@ -115,6 +130,28 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
               <path d="M50 60c-20 0-32 14-32 32h64c0-18-12-32-32-32z" />
             </svg>
           </div>
+        )}
+
+        {/* Malla facial: líneas entre landmarks (efecto de análisis biométrico) */}
+        {capturandoOFoto && (
+          <svg
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            className="pointer-events-none absolute inset-0 h-full w-full"
+          >
+            {MESH.map(([a, b], i) => (
+              <line
+                key={i}
+                x1={LANDMARKS[a].x}
+                y1={LANDMARKS[a].y}
+                x2={LANDMARKS[b].x}
+                y2={LANDMARKS[b].y}
+                stroke="#25D366"
+                strokeWidth="0.5"
+                opacity="0.5"
+              />
+            ))}
+          </svg>
         )}
 
         {/* Puntos biométricos sobre el rostro (captura de rasgos) */}
