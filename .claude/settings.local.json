@@ -54,7 +54,8 @@
       "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Ajustes biometria e identidad *)",
       "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Tono: tuteo \\(de tu\\) + emojis frecuentes *)",
       "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Grounding de credito + foto biometrica real *)",
-      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Fix camara: el video no mostraba la imagen \\(ref null al asignar srcObject\\) *)"
+      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Fix camara: el video no mostraba la imagen \\(ref null al asignar srcObject\\) *)",
+      "Bash(git -c user.name=\"Chispa Demo\" -c user.email=\"demo@chispa.local\" commit -q -m \"FaceScanner: zoom sobre el rostro para encuadrarlo en el ovalo\")"
     ]
   }
 }

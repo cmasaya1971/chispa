@@ -116,7 +116,8 @@ export function FaceScanner({ onComplete, onCancel }: Props) {
           muted
           autoPlay
           className={`h-full w-full object-cover ${hayCamara ? "" : "hidden"}`}
-          style={{ transform: "scaleX(-1)" }}
+          // Zoom + origen hacia arriba para encuadrar el rostro dentro del óvalo.
+          style={{ transform: "scaleX(-1) scale(1.7)", transformOrigin: "center 32%" }}
         />
 
         {/* Silueta si no hay cámara */}
