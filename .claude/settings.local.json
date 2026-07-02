@@ -51,7 +51,8 @@
       "Bash(node \"C:/Users/masay/AppData/Local/Temp/claude/C--Develop-Chispa/0e11d8cf-2227-420d-85c0-eac291db38c1/scratchpad/poll.mjs\")",
       "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Fix deploy Vercel: extension .js en imports del servidor \\(ESM nativo\\) *)",
       "Bash(node \"C:/Users/masay/AppData/Local/Temp/claude/C--Develop-Chispa/0e11d8cf-2227-420d-85c0-eac291db38c1/scratchpad/poll2.mjs\")",
-      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Ajustes biometria e identidad *)"
+      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Ajustes biometria e identidad *)",
+      "Bash(git -c 'user.name=Chispa Demo' -c user.email=demo@chispa.local commit -q -m 'Tono: tuteo \\(de tu\\) + emojis frecuentes *)"
     ]
   }
 }
