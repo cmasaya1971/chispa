@@ -1,166 +1,191 @@
-# CLAUDE.md — Chispa (demo WhatsApp)
+# CLAUDE.md — Chispa (demo WhatsApp · IA generativa)
 
 > Guía maestra para Claude Code. Léela completa antes de tocar código.
-> **Regla de oro:** todo lo que ve el usuario sale del mock (`chispa_mock_data.json`) o del copy validado. Nada se inventa, nada se reescribe.
+> **Regla de oro:** Chispa **conversa** con IA generativa y **personalidad propia**, pero **todo número, saldo, recibo o dato la IA lo obtiene de una herramienta (tool) que lee el mock** (`chispa_mock_data.json`). La IA redacta; **los datos nunca los inventa.**
+
+---
+
+## 0. Cambio de arquitectura (Nivel 2) — léelo primero
+
+Este proyecto arrancó como una simulación **determinista** (máquina de estados + copy validado carácter por carácter). **Se migró conscientemente a Nivel 2: IA generativa plena con personalidad**, usando la API de **OpenAI**.
+
+Qué cambia y qué NO:
+
+| | Antes (determinista) | Ahora (Nivel 2 · IA generativa) |
+|---|---|---|
+| Motor | Máquina de estados declarativa | **Orquestador LLM** (OpenAI) con function-calling |
+| Copy | Validado, byte-idéntico | **Guía de tono + ejemplos gold**; la IA parafrasea con personalidad |
+| Datos | Interpolados del mock | **Solo vía tools** (grounding); la IA nunca escribe un número de su cabeza |
+| Red / backend | Ninguno, offline | **Serverless function en Vercel** que llama a OpenAI (protege la API key) |
+| Determinismo | Total | La conversación varía; **los datos y las acciones son deterministas** (los ejecutan las tools) |
+
+**Lo que se conserva intacto del diseño original:**
+- `chispa_mock_data.json` sigue siendo la **única fuente de verdad** de los datos.
+- Las **operaciones** del modelo de datos (`01-modelo-datos.md`) siguen existiendo — ahora se exponen como **tools**.
+- El **kit de UI de WhatsApp** (`02-design-system.md`) se construye igual, una sola vez.
+- El **tono** de Chispa (voseo guatemalteco, cálido, banca formal) es la base de su personalidad.
+- Las **7 fichas** (`funcionalidades/`) dejan de ser máquinas de estado y pasan a ser **la base de conocimiento y los ejemplos gold** que alimentan el system prompt.
 
 ---
 
 ## 1. Qué estamos construyendo
 
-**Chispa** es una solución de microcrédito digital sobre WhatsApp para **Banco GyT Continental (Guatemala)**. Este repo es una **webapp que simula WhatsApp** y demuestra los 7 flujos priorizados como si fueran un producto real.
+**Chispa** es una solución de microcrédito digital sobre WhatsApp para **Banco GyT Continental (Guatemala)**. Este repo es una **webapp que simula WhatsApp** y demuestra los 7 flujos priorizados como si fueran un producto real, **con un asistente conversacional inteligente**.
 
-El material lo revisan **Hersson y niveles gerenciales**. Por eso el estándar no es "una demo que funciona": es **credibilidad de banca formal**. Cada número, cada saldo, cada recibo debe verse real porque *sale de datos reales sembrados*, y cada frase de Chispa es la que ya se validó con el cliente.
+El material lo revisan **Hersson y niveles gerenciales**. El estándar es **credibilidad de banca formal**: cada número, cada saldo, cada recibo debe verse real **porque sale de datos reales sembrados** (vía tools), y Chispa debe conversar de forma natural, cálida y con criterio bancario.
 
-**No es** un chatbot con IA en vivo. Es una simulación **determinista**: mismas entradas → mismas salidas, siempre.
+**Es** un asistente con IA generativa (OpenAI) que conversa en lenguaje natural y tiene personalidad. **No es** un bot de árbol de botones. Pero **está aterrizado (grounded):** los hechos vienen del mock a través de herramientas, nunca de la imaginación del modelo.
 
 ---
 
 ## 2. Stack y cómo correr
 
-- **React + Vite + TypeScript + Tailwind CSS**
-- **Sin backend. Sin IA en vivo. Sin llamadas de red.** Todo el estado vive en memoria durante la sesión.
-- Mock data en memoria (se puede reiniciar en cualquier momento).
+- **Frontend:** React + Vite + TypeScript + Tailwind CSS.
+- **Backend:** una **serverless function** (`/api/chat`) desplegable en **Vercel**, que hace de proxy hacia **OpenAI**. Existe para **no exponer la API key en el navegador**.
+- **IA:** OpenAI (modelo por defecto sugerido: `gpt-4o`), con **function-calling / tools**. Idealmente vía **Vercel AI SDK** para simplificar el streaming.
+- **Estado del mock:** vive en memoria en el cliente durante la sesión; se reinicia con "Reiniciar demo".
 
 ```bash
 npm install
-npm run dev      # servidor de desarrollo (Vite)
+npm run dev      # Vite + funciones (vercel dev, o proxy local)
 npm run build    # build de producción
 ```
 
-Objetivo de despliegue: un build estático que abra en cualquier navegador y en un teléfono, sin configurar nada.
+**API key (NUNCA al repo):**
+- Local: archivo `.env` (ignorado por git) con `OPENAI_API_KEY=...`.
+- Producción: variable de entorno en Vercel.
+- La key **solo** se usa en la serverless function (lado servidor). El frontend nunca la ve.
+
+Objetivo de despliegue: build estático + serverless function en Vercel; se comparte con un **link** que cualquiera abre en su teléfono, sin instalar nada.
 
 ---
 
-## 3. Arquitectura: el motor y el kit se construyen UNA vez
-
-Este es el corazón del diseño y la razón por la que es eficiente y realista a la vez:
+## 3. Arquitectura: el kit y el orquestador se construyen UNA vez
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Kit de UI de WhatsApp  (se construye una vez)           │
 │  PhoneFrame · ChatHeader · ChatThread · Bubble · Card ·  │
 │  QuickReplies · TypingIndicator                          │
+│  (streaming de texto tipo "escribiendo…")                │
 ├─────────────────────────────────────────────────────────┤
-│  Motor de conversación  (se construye una vez)           │
-│  - lee una máquina de estados declarativa                │
-│  - renderiza mensajes con delay + indicador "escribiendo"│
-│  - resuelve la entrada del usuario (botón o texto laxo)  │
-│  - aplica efectos sobre el mock                          │
+│  Orquestador LLM  (se construye una vez)                 │
+│  - system prompt = personalidad + capacidades + guardas  │
+│  - llama a OpenAI con las TOOLS declaradas               │
+│  - loop de tool-calling: modelo pide tool → se ejecuta   │
+│    contra el mock → resultado vuelve al modelo → responde│
+│  - vive en la serverless function (API key server-side)  │
+├─────────────────────────────────────────────────────────┤
+│  Tools = operaciones del modelo de datos  (grounding)    │
+│  leerSaldo · consultarRecibo · calcularCuota ·           │
+│  crearCredito · debitarMonedero · acreditarMonedero · …  │
+│  → ÚNICA vía por la que la IA obtiene o cambia datos     │
 ├─────────────────────────────────────────────────────────┤
 │  Modelo de datos  (chispa_mock_data.json + operaciones)  │
-│  leerSaldo · debitarMonedero · acreditarMonedero ·       │
-│  consultarRecibo · crearCredito · calcularCuota · …      │
 ├─────────────────────────────────────────────────────────┤
-│  7 flujos = 7 fichas de DATOS  (no código)               │
+│  7 flujos = conocimiento + ejemplos gold en el prompt    │
 │  acceso · monedero · remesa · CRÉDITO · pagos ·          │
 │  chispapay · engagement                                  │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Consecuencia práctica:** agregar o cambiar un flujo = editar una ficha declarativa en `funcionalidades/`. **No se escribe lógica nueva por flujo.** Si un flujo necesita código nuevo, primero preguntémonos si el motor o una operación del modelo de datos deberían absorberlo.
+**Consecuencia práctica:** la inteligencia vive en **(a)** el system prompt (quién es Chispa, qué puede hacer, cómo habla) y **(b)** el conjunto de tools (qué datos puede leer/mutar). Agregar capacidad = agregar una tool y/o describir el flujo en el prompt. **No se escribe una máquina de estados por flujo.**
 
 ---
 
-## 4. Contrato del flujo declarativo (lo que consume el motor)
+## 4. El contrato ahora: system prompt + tools
 
-Cada flujo es un objeto `Flujo`. Este es el contrato que el motor sabe interpretar (definición canónica; las fichas lo instancian):
+### 4.1 System prompt (la personalidad y las reglas de Chispa)
 
-```ts
-type Flujo = {
-  codigo: string;              // "credito"
-  nombre: string;              // "Crédito"
-  funcionalidades: string[];   // ["D1","D2","D3","D4"]  (trazabilidad al alcance 2.3)
-  precondiciones?: Guard[];    // p.ej. requiere sesión autenticada (gate A10)
-  disparador: Disparador;      // cómo arranca el flujo
-  estadoInicial: string;
-  estados: Record<string, Estado>;
-};
+El system prompt es el "alma" de Chispa. Debe codificar, como mínimo:
 
-type Disparador = {
-  ctaMenu?: string;            // id del botón en el menú/inicio, si aplica
-  keywords: string[];          // match laxo para iniciar por texto libre
-};
+1. **Identidad:** asistente de **Chispa**, microcrédito de **Banco GyT Continental** sobre WhatsApp.
+2. **Personalidad y tono:** guatemalteco, cálido, cercano, **voseo** (*contame, calificás, ocupás, elegí, ¿lo aceptás?*), breve (una idea por mensaje), confiable como banca formal. Ver §6.
+3. **Regla de grounding (crítica):** *"Nunca inventes ni estimes saldos, montos, recibos, cuotas ni fechas. Para cualquier dato, llamá a la herramienta correspondiente y usá su resultado. Si no hay tool para algo, decilo con naturalidad; no lo inventes."*
+4. **Comportamiento de banca formal:** confirmá antes de actuar (pagar, desembolsar, enviar); entregá comprobante después; verificá saldo antes de pagar; pedí el identificador (contador/NIS/teléfono) cuando aplique.
+5. **Autenticación:** las acciones sensibles (crédito, pagos, envíos) requieren sesión autenticada. Si `sesion.autenticada` es falso, activá el gate de rostro (tool `autenticar` / flujo `acceso`) **una vez por sesión**; luego no lo vuelvas a pedir.
+6. **Capacidades (los 7 flujos):** describir qué puede hacer Chispa, con los **ejemplos gold** de cada ficha como referencia de tono y de secuencia ideal.
 
-type Estado = {
-  id: string;
-  funcionalidad?: string;      // "D2" — para trazar qué requisito cubre
-  alEntrar: MensajeBot[];      // Chispa renderiza esto en orden, con delays
-  respuestasRapidas?: RespuestaRapida[];   // camino principal (botones)
-  esperaTexto?: boolean;       // además acepta texto libre
-  transiciones: Transicion[];
-  final?: boolean;
-};
+Las **fichas de `funcionalidades/`** son la fuente de este contenido: su copy validado se usa como **ejemplos few-shot / gold** de cómo suena Chispa, no como texto a recitar literal.
 
-type MensajeBot =
-  | { tipo: "burbuja"; texto: string; datos?: string[]; delayMs?: number }
-  | { tipo: "tarjeta"; tarjeta: Tarjeta; datos?: string[]; delayMs?: number };
+### 4.2 Tools (grounding — la única puerta a los datos)
 
-type RespuestaRapida = {
-  id: string;
-  label: string;               // texto del botón
-  insertaBurbujaUsuario?: string; // burbuja que aparece del lado del usuario al tocarlo
-};
+Cada operación de `01-modelo-datos.md` se expone como una tool con su JSON Schema. Divididas en:
 
-type Transicion = {
-  cuando: Matcher;             // botón, keywords, o por defecto
-  efectos?: Efecto[];          // mutaciones sobre el mock (ver modelo de datos)
-  irA: string;                 // id del siguiente estado
-};
+- **Lectura:** `leerSaldo`, `leerCuenta`, `listarMovimientos`, `buscarServicio`, `buscarContacto`, `remesaDisponible`.
+- **Cálculo:** `calcularCuota` (amortización francesa, determinista).
+- **Mutación (acciones):** `acreditarMonedero`, `debitarMonedero`, `cobrarRemesa`, `pagarServicio`, `enviarAContacto`, `recargar`, `pagarComercioConSaldo`, `pagarComercioEnCuotas`, `crearCredito`, `acreditarReferido`, `acreditarCashback`.
+- **Sesión:** `autenticar`, `reiniciarDemo`.
 
-type Matcher =
-  | { respuestaRapida: string }
-  | { keywords: string[] }
-  | { porDefecto: true };
+Reglas de las tools:
+- Son **puras y deterministas** sobre el estado del mock. Mismo estado + mismos argumentos → mismo resultado.
+- Las de **mutación** exigen (por diseño de prompt) **confirmación del usuario antes** de ejecutarse.
+- El **resultado de la tool es la verdad**: la IA debe reflejar exactamente los números que la tool devuelve (formateados según §5).
+- Firmas y semántica exactas: `01-modelo-datos.md §4`.
+
+### 4.3 Loop de orquestación (en la serverless function)
+
+```
+1. Cliente envía: historial de mensajes + snapshot del estado del mock.
+2. Serverless function llama a OpenAI con: system prompt + historial + tools.
+3. Si el modelo pide una o más tools:
+      ejecutar cada tool contra el estado → obtener resultado (y estado mutado)
+      devolver resultados al modelo → repetir desde 2.
+4. Cuando el modelo responde texto final → se transmite (stream) al cliente.
+5. El cliente renderiza el texto y guarda el estado mutado devuelto.
 ```
 
-- **`datos`**: lista opcional que documenta **de qué campos del mock salen los números** de esa burbuja (trazabilidad "todo sale del mock"). El motor no lo necesita para renderizar; existe para auditoría y para el reviewer.
-- **`efectos`**: operaciones del modelo de datos (`acreditarMonedero`, `debitarMonedero`, `crearCredito`, `set`, …), definidas en `01-modelo-datos.md`.
+La API key vive solo aquí. El estado autoritativo lo mantiene el cliente y se pasa en cada request (mock pequeño; simple y reiniciable).
 
 ---
 
-## 5. Reglas de copy (crítico, no negociable)
+## 5. Reglas de datos y formato (grounding)
 
-1. **Copy exacto validado. No reescribir.** Las frases de Chispa ya se validaron con el cliente (Sección 3.3 del documento maestro). Se copian **carácter por carácter**, incluyendo signos, tildes y negritas.
-2. **Negrita = `**...**`** en el campo `texto`; se renderiza como negrita de WhatsApp. El molde marca en negrita exactamente lo que la conversación validada marca.
-3. **Formato de moneda literal.** El copy validado **no** es uniforme: el mismo flujo muestra `Q1,250` (sin decimales) y `Q3,250.00` (con decimales). Se respeta tal cual está validado. **No normalizar.**
-4. **Interpolación permitida solo si es byte-idéntica.** Se puede usar un token del mock (p.ej. el nombre "José") únicamente cuando su render es idéntico al validado. Ante la mínima duda, se guarda el string literal y se anota la procedencia en `datos`.
+1. **Todo dato viene de una tool.** Saldos, montos, recibos, cuotas, fechas, nombres de contacto: la IA los obtiene llamando la tool, no de memoria. Esta es la garantía de credibilidad bancaria.
+2. **Formato de moneda.** Dos formatters conviven (el copy original no era uniforme): `fmtQ0(n)` → `Q1,250` y `fmtQ2(n)` → `Q1,250.00`. La serverless function/tools devuelven los montos ya formateados o con indicación de formato; la IA los usa tal cual. Ver `01-modelo-datos.md §3`.
+3. **Los datos mutan en la sesión y se ven después.** Pagar baja el saldo; acreditar lo sube; el cambio se refleja en consultas posteriores (misma sesión).
+4. **Ante duda, la IA pregunta o consulta la tool** — nunca rellena con un valor plausible.
 
 ---
 
-## 6. Tono de Chispa
+## 6. Personalidad y tono de Chispa (base del system prompt)
 
-Guatemalteco, cálido y cercano, con **voseo**, breve y confiable como banca formal. Se deduce del copy validado y **no se altera**:
+Guatemalteco, cálido y cercano, con **voseo**, breve y confiable como banca formal:
 
 - Voseo natural: *contame, calificás, ocupás, elegí, ¿lo aceptás?*
 - Cercanía respetuosa: *"Con gusto, José."*, *"¡Perfecto!"*, *"¡Listo!"*
-- Frases cortas, una idea por burbuja, cero jerga técnica.
-- Confirma antes de actuar y entrega comprobante después (comportamiento de banca formal).
+- Frases cortas, una idea por mensaje, cero jerga técnica.
+- Confirma antes de actuar; entrega comprobante después (banca formal).
+- Nunca revela que es un modelo de IA ni habla de "prompts", "tokens" ni de su funcionamiento interno.
 
-Al crear copy nuevo para flujos aún no ilustrados, imitar este registro **exacto**. Cuando exista copy validado, usar ese y nada más.
+**Ejemplos gold** (de `funcionalidades/credito.md`, camino ideal — imitar el registro, no recitar):
+
+> Con gusto, José. Para conocerte mejor, contame: ¿cuál es tu principal fuente de ingresos?
+> ¡Perfecto! Justo veo tus remesas de los últimos meses. Tu ingreso promedio es **Q2,325**, así que calificás hasta **Q3,000**. ¿Cuánto ocupás?
+> ¡Listo! Deposité **Q2,000** en tu monedero. Tu saldo pasó de Q1,250 a **Q3,250.00**. Tu primera cuota de Q394 vence el 1 de agosto.
+
+La IA puede parafrasear con esta voz, pero los **números** de esos mensajes siempre salen de las tools (`leerSaldo`, `calcularCuota`, etc.).
 
 ---
 
-## 7. Principios de realismo (Sección 3.2 del documento)
+## 7. Principios de realismo
 
-1. **El usuario pide, el sistema no adivina.** Nada proactivo; si quiere algo, lo solicita.
-2. **Autenticación una vez por sesión.** El rostro (validado contra RENAP, flujo `acceso`/A10) se pide en la **primera acción sensible**; luego la sesión queda confiable y no se vuelve a pedir. Los flujos sensibles declaran `precondiciones: [requiereAuth]`.
-3. **Datos reales de la base sembrada** en cada respuesta: saldo, movimientos, recibos, remesas.
-4. **Comportamiento de banca formal:** verifica saldo antes de pagar, pide el identificador (contador/NIS/teléfono), pregunta rango de fechas, entrega comprobantes.
+1. **El usuario pide, Chispa no adivina** el dato: si no lo sabe, llama la tool o pregunta.
+2. **Autenticación una vez por sesión.** El rostro (validado contra RENAP, flujo `acceso`/A10) se pide en la **primera acción sensible**; luego la sesión queda confiable. Tool `autenticar`.
+3. **Datos reales de la base sembrada** en cada respuesta, siempre vía tools.
+4. **Banca formal:** verifica saldo antes de pagar, pide el identificador (contador/NIS/teléfono), confirma antes de actuar, entrega comprobantes.
 
-Y estos requisitos de experiencia:
-
-- **Respuestas rápidas como camino principal** + **keyword-matching laxo** para texto escrito (acentos/mayúsculas indiferentes, coincidencia por inclusión).
-- **Indicador "escribiendo…"** antes de cada burbuja de Chispa, con **delays pequeños** (sugerido 600–1200 ms según largo).
-- **Los datos mutan en la sesión:** pagar baja el saldo, acreditar lo sube, y el cambio se ve en flujos posteriores.
-- **Botón "Reiniciar demo"** que restaura el mock a su semilla.
-- **Viewport de teléfono** (marco `PhoneFrame`).
-- **Todo determinista.** Sin backend, sin IA en vivo, sin aleatoriedad.
+Requisitos de experiencia:
+- **Lenguaje natural como camino principal.** Se pueden ofrecer **quick replies** como sugerencias/atajos, pero el usuario puede escribir libre y la IA entiende.
+- **Streaming tipo "escribiendo…"**: el texto de Chispa aparece progresivamente (indicador antes / stream durante).
+- **Los datos mutan en la sesión** y se ven en interacciones posteriores.
+- **Botón "Reiniciar demo"** → tool `reiniciarDemo` → restaura la semilla y limpia el hilo.
+- **Viewport de teléfono** (`PhoneFrame`).
+- **Acciones deterministas:** aunque la redacción varíe, ejecutar la misma acción sobre el mismo estado da el mismo resultado numérico.
 
 ---
 
 ## 8. Design tokens — WhatsApp (tema claro clásico)
-
-Deben coincidir con los mockups validados del documento. Definir en Tailwind (`theme.extend.colors`) y/o variables CSS.
 
 | Token | Uso | Valor |
 |---|---|---|
@@ -175,32 +200,28 @@ Deben coincidir con los mockups validados del documento. Definir en Tailwind (`t
 | `wa-text-2` | hora / secundario | `#667781` |
 | `wa-link` | enlaces | `#027EB5` |
 
-Tipografía: system UI / Helvetica Neue (aproxima WhatsApp). Burbujas con esquina "cola", sombra sutil, radio ~7–8px. Hora y checks dentro de la burbuja.
+Tipografía: system UI / Helvetica Neue. Burbujas con esquina "cola", sombra sutil, radio ~7–8px. Hora y checks dentro de la burbuja. Detalle en `02-design-system.md`.
 
 ---
 
-## 9. Estructura del repo (spec pack)
+## 9. Estructura del repo
 
 ```
 CLAUDE.md                    ← este archivo
-01-modelo-datos.md           ← chispa_mock_data.json como fuente de verdad + operaciones
-02-design-system.md          ← PhoneFrame, ChatHeader, ChatThread, Bubble, Card,
-                               QuickReplies, TypingIndicator
-funcionalidades/
-  acceso.md                  ← A10 (gate de rostro/RENAP)
-  monedero.md                ← B1 saldo · B3 movimientos
-  remesa.md                  ← C1 · C3 · C5
-  credito.md                 ← D1 · D2 · D3 · D4   ← MOLDE VALIDADO PRIMERO
-  pagos.md                   ← E4 servicios · E1 envíos · E5 recargas
-  chispapay.md               ← E7 QR · E8 enlace · E9 saldo/cuotas
-  engagement.md              ← J1 referidos · J2 cashback
+01-modelo-datos.md           ← chispa_mock_data.json + operaciones (ahora = tools)
+02-design-system.md          ← kit de UI de WhatsApp
+funcionalidades/             ← base de conocimiento + ejemplos gold por flujo
+  acceso.md · monedero.md · remesa.md · credito.md ·
+  pagos.md · chispapay.md · engagement.md
+src/                         ← (a construir) app React + kit UI + cliente de chat
+api/                         ← (a construir) serverless function /api/chat (OpenAI)
 ```
 
-**Convención de fichas:** una por flujo, nombre en minúscula sin código (`credito.md`); el código va en el frontmatter/encabezado y en `funcionalidades[]`.
+Las fichas ya **no** son máquinas de estado a ejecutar; son la **fuente del system prompt** (capacidades, tono, ejemplos gold) y la referencia de qué tools hace falta.
 
 ---
 
-## 10. Semilla del mock (resumen — la fuente formal es `01-modelo-datos.md`)
+## 10. Semilla del mock (resumen — fuente formal: `01-modelo-datos.md` / `chispa_mock_data.json`)
 
 | Entidad | Datos |
 |---|---|
@@ -214,16 +235,17 @@ funcionalidades/
 | Comercio | Tienda La Bendición (acepta Chispa Pay) |
 | Engagement | Código JOSE24 · premio Q30 por referido · cashback Q12 |
 
-> ⚠️ El archivo `chispa_mock_data.json` es la única fuente de verdad en runtime. Esta tabla es un resumen para orientación; los valores exactos y su forma se formalizan en `01-modelo-datos.md`.
+> ⚠️ `chispa_mock_data.json` es la única fuente de verdad en runtime.
 
 ---
 
 ## 11. Definición de "hecho" para cualquier flujo
 
-- Copy idéntico al validado (o al registro de tono si aún no hay validado).
-- Todos los números provienen del mock; ninguno hardcodeado en la vista.
-- Los efectos mutan el mock y se ven en flujos posteriores dentro de la misma sesión.
-- Camino principal por botones + texto libre por keywords laxos.
-- Indicador "escribiendo…" con delays; comportamiento determinista.
-- "Reiniciar demo" restaura la semilla.
-- Renderiza dentro del `PhoneFrame` y se ve como WhatsApp real.
+- Chispa conversa en lenguaje natural, con su personalidad (voseo, cálido, banca formal).
+- **Todos los datos provienen de tools** que leen el mock; ninguno lo inventa la IA.
+- Las **acciones** (pagar, desembolsar, enviar) confirman antes, ejecutan vía tool y entregan comprobante.
+- Los **efectos mutan el mock** y se ven en interacciones posteriores de la misma sesión.
+- Acciones sensibles pasan por el **gate de autenticación** una vez por sesión.
+- **Streaming "escribiendo…"**; render dentro del `PhoneFrame`; se ve como WhatsApp real.
+- **"Reiniciar demo"** restaura la semilla.
+- La **API key** vive solo en la serverless function; nunca en el frontend ni en git.
