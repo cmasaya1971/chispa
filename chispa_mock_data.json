@@ -1,14 +1,12 @@
 {
   "_meta": {
-    "descripcion": "Fuente de verdad del demo Chispa. Reconstruido desde el documento maestro (§3.1 y conversaciones validadas §3.3). Todo lo que ve el usuario sale de aquí.",
+    "descripcion": "Fuente de verdad del demo Chispa. Baseline original + campos del flujo de crédito estilo ZIGI (configurador, contrato, declaraciones IVE, comprobante). Todo lo que ve el usuario sale de aquí.",
     "hoy": "30 jun",
     "moneda": "GTQ"
   },
-
   "sesion": {
     "autenticada": false
   },
-
   "usuario": {
     "nombreCompleto": "José Manuel García López",
     "nombreCuenta": "José M. García López",
@@ -27,18 +25,15 @@
       "sexo": "Masculino"
     }
   },
-
   "monedero": {
     "numeroCuenta": "****4821",
     "nombre": "Monedero Chispa",
     "saldo": 1250.00
   },
-
   "tasaCambio": {
     "quetzalPorUsd": 7.62,
     "fuente": "Banguat"
   },
-
   "remesa": {
     "recurrente": {
       "montoUsd": 300,
@@ -52,14 +47,41 @@
       "origen": "Estados Unidos"
     }
   },
-
   "credito": {
     "lineaAprobada": 3000,
     "tasaMensual": 0.05,
     "plazosMeses": [3, 6, 12],
-    "fechaPrimeraCuota": "1 de agosto"
-  },
+    "fechaPrimeraCuota": "1 de agosto",
 
+    "montoMin": 100,
+    "montoMax": 3000,
+    "montoDefault": 2000,
+    "frecuencias": [
+      { "id": "semanal",   "label": "Semanal",   "mesesPorPeriodo": 0.25, "pagosOpciones": [12, 24, 48], "pagosDefault": 24, "unidad": "semana" },
+      { "id": "quincenal", "label": "Quincenal", "mesesPorPeriodo": 0.5,  "pagosOpciones": [6, 12, 24],  "pagosDefault": 12, "unidad": "quincena" },
+      { "id": "mensual",   "label": "Mensual",   "mesesPorPeriodo": 1,    "pagosOpciones": [3, 6, 12],   "pagosDefault": 6,  "unidad": "mes" }
+    ],
+    "frecuenciaDefault": "mensual",
+    "fechaDesembolso": "30 de junio",
+    "horaDesembolso": "02:26 pm",
+    "metodoPago": "Débito automático de tu monedero",
+    "permitePagoAdelantado": true,
+    "contratoResumen": {
+      "titulo": "Contrato del préstamo",
+      "formasDePago": "El cobro se hace por débito automático de tu Monedero Chispa en cada fecha de pago. Puedes adelantar cuotas o liquidar el préstamo cuando quieras, sin penalización.",
+      "costo": "El costo es una tasa del 5% mensual calculada sobre el saldo del préstamo y distribuida en tus cuotas. Cumplir el plan de pago mantiene tu buen historial crediticio.",
+      "documentos": "Te enviaremos el pagaré, el plan de pagos y los Términos y Condiciones a tu correo."
+    },
+    "declaracionesRequeridas": [
+      { "id": "tyc", "texto": "Confirmo que he leído y acepto los Términos y Condiciones" },
+      { "id": "pep_us_cpe", "texto": "Confirmo que no soy Persona Expuesta Políticamente (PEP), Persona Estadounidense, ni Proveedor del Estado (CPE)" }
+    ],
+    "infoDeclaraciones": {
+      "pep": "Persona Expuesta Políticamente (PEP): quien desempeña o ha desempeñado cargos públicos relevantes en Guatemala u otro país, dirigentes de partidos políticos, y sus parientes y asociados cercanos.",
+      "us_person": "Persona Estadounidense (U.S. Person, según FATCA): residentes y ciudadanos de Estados Unidos, nacidos en EE. UU. o que tributan en ese país.",
+      "cpe": "Contratista o Proveedor del Estado (CPE): persona individual o jurídica que provee bienes, obras o servicios al Estado por un valor que excede los Q900,000.00, según la Ley de Contrataciones del Estado."
+    }
+  },
   "serviciosPendientes": [
     {
       "id": "eegsa",
@@ -80,16 +102,13 @@
       "vence": null
     }
   ],
-
   "contactos": [
     { "id": "ana", "nombre": "Ana García", "relacion": "hermana", "telefono": "5548-9921" },
     { "id": "luis", "nombre": "Luis Pérez", "relacion": "amigo", "telefono": null }
   ],
-
   "operadoresRecarga": [
     { "id": "tigo", "nombre": "Tigo" }
   ],
-
   "comercio": {
     "id": "la-bendicion",
     "nombre": "Tienda La Bendición",
@@ -100,7 +119,6 @@
       "_nota": "cuotas3 es un valor validado literal; NO recalcular con la tasa del crédito"
     }
   },
-
   "engagement": {
     "codigoReferido": "JOSE24",
     "enlaceReferido": "chispa.gt/r/JOSE24",
@@ -108,7 +126,6 @@
     "cashbackMes": 12,
     "referidoDemo": { "nombre": "Luis Pérez" }
   },
-
   "movimientosRango": "16 al 30 de junio",
   "movimientos": [
     { "concepto": "Pago de luz · EEGSA", "fecha": "30 jun", "monto": -120.00 },
@@ -118,6 +135,5 @@
     { "concepto": "Envío a Ana García", "fecha": "28 jun", "monto": -600.00 },
     { "concepto": "Remesa de Rubén García", "fecha": "28 jun", "monto": 2286.00 }
   ],
-
   "creditos": []
 }
