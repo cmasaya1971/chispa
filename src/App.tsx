@@ -59,6 +59,14 @@ export default function App() {
   const [widget, setWidget] = useState<Widget | null>(null);
   // Datos que se van juntando durante la secuencia del crédito (config → firma).
   const wizard = useRef<{ oferta?: OfertaElegida; firma?: string; declaraciones?: boolean }>({});
+  // Tras el análisis de remesas, abrimos el configurador sí o sí (sin depender de la IA).
+  const pendienteConfigurador = useRef(false);
+  // Gate de identidad DETERMINISTA (no depende de la IA). "pidiendoDPI" = esperando
+  // el DPI del usuario; "pendiente" = la solicitud original a atender tras validar.
+  const gate = useRef<{ fase: "libre" | "pidiendoDPI"; pendiente: string | null }>({
+    fase: "libre",
+    pendiente: null,
+  });
 
   function reiniciar() {
     contador = 0;
@@ -68,6 +76,8 @@ export default function App() {
     setEscaneando(false);
     setWidget(null);
     wizard.current = {};
+    pendienteConfigurador.current = false;
+    gate.current = { fase: "libre", pendiente: null };
   }
 
   async function procesarTurno(nuevos: Mensaje[], estadoOverride?: Estado) {
@@ -91,10 +101,14 @@ export default function App() {
           adjuntos: res.adjuntos,
         },
       ]);
-      // La IA solo abre la cámara y el configurador; el resto lo encadena el frontend.
+      // La IA abre la cámara, el análisis y el configurador; el resto lo encadena el frontend.
       if (res.uiAccion === "escaneoRostro") setEscaneando(true);
       else if (res.uiAccion === "analisisRemesas") setWidget("analisis");
       else if (res.uiAccion === "configurador") setWidget("configurador");
+      // Red de seguridad: si venimos del análisis de remesas, abrimos el configurador
+      // aunque la IA no lo haya pedido (evita que el flujo se quede en "un momento…").
+      else if (pendienteConfigurador.current) setWidget("configurador");
+      pendienteConfigurador.current = false;
     } catch (err) {
       setMensajes((prev) => [
         ...prev,
@@ -112,10 +126,56 @@ export default function App() {
     }
   }
 
+  // Detecta saludos/preguntas generales que NO requieren autenticación.
+  const esSaludo = (t: string) =>
+    /^(hola|holi|buenas|buenos dias|buenos días|buenas tardes|buenas noches|hey|hi|ola|saludos|que tal|qué tal|gracias)\b/i.test(
+      t.trim()
+    );
+
   function responder(textoUsuario: string) {
     const t = textoUsuario.trim();
     if (!t) return;
+
+    const soloDig = (s: string) => s.replace(/\D/g, "");
+
+    // Gate determinista: si aún no valida identidad…
+    if (estado.sesion.autenticada !== true) {
+      // (b) Estamos esperando el DPI → este mensaje es el DPI.
+      if (gate.current.fase === "pidiendoDPI") {
+        usuarioDice(t);
+        const ing = soloDig(t);
+        if (ing.length >= 13 && ing === soloDig(estado.usuario.dpi)) {
+          chispaDice(
+            `¡Gracias, ${estado.usuario.nombreCorto}! 😊 Ahora mira a la cámara para validar tu rostro 📷`
+          );
+          setEscaneando(true); // al completar, escaneoCompletado finaliza la validación
+        } else {
+          chispaDice(
+            "Ese número de DPI no coincide con nuestros registros 🪪 Intenta de nuevo, por favor."
+          );
+        }
+        return;
+      }
+      // (a) Primera operación sensible (no es un saludo) → iniciamos la validación.
+      if (gate.current.fase === "libre" && !esSaludo(t)) {
+        usuarioDice(t);
+        gate.current = { fase: "pidiendoDPI", pendiente: t };
+        chispaDice(
+          `Con gusto, ${estado.usuario.nombreCorto} 😊 Como es tu primera operación de hoy, validemos tu identidad. Envíame tu número de DPI, por favor 🪪`
+        );
+        return;
+      }
+    }
+
+    // Autenticado, o saludo sin autenticar → flujo normal con la IA.
     procesarTurno([{ id: nuevoId(), emisor: "usuario", texto: t, hora: horaWa() }]);
+  }
+
+  function chispaDice(texto: string) {
+    setMensajes((prev) => [...prev, { id: nuevoId(), emisor: "chispa", texto, hora: horaWa() }]);
+  }
+  function usuarioDice(texto: string) {
+    setMensajes((prev) => [...prev, { id: nuevoId(), emisor: "usuario", texto, hora: horaWa() }]);
   }
 
   function avisoVisible(texto: string) {
@@ -125,14 +185,20 @@ export default function App() {
 
   function escaneoCompletado() {
     setEscaneando(false);
+    const pendiente = gate.current.pendiente;
+    gate.current = { fase: "libre", pendiente: null };
+    const base =
+      "la validación biométrica facial se completó con éxito y la identidad del usuario fue contrastada satisfactoriamente contra la base de datos del RENAP.";
+    const textoIA = pendiente
+      ? `[Evento del sistema: ${base} Llama la tool autenticar y, enseguida, atiende su solicitud original: "${pendiente}".]`
+      : `[Evento del sistema: ${base}]`;
     procesarTurno([
       {
         id: nuevoId(),
         emisor: "sistema",
         texto:
           "Validación biométrica completada con éxito. Tu identidad fue contrastada con la base de datos del **RENAP**.",
-        textoIA:
-          "[Evento del sistema: la validación biométrica facial se completó con éxito y la identidad del usuario fue contrastada satisfactoriamente contra la base de datos del RENAP.]",
+        textoIA,
         hora: horaWa(),
       },
     ]);
@@ -157,6 +223,7 @@ export default function App() {
   // verificado y que califica para garantía. La IA sigue con la evaluación.
   function analisisRemesasListo() {
     setWidget(null);
+    pendienteConfigurador.current = true; // el configurador debe abrir tras la respuesta
     procesarTurno([
       {
         id: nuevoId(),

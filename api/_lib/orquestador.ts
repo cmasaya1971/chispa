@@ -58,7 +58,7 @@ export async function procesarChat(entrada: EntradaChat): Promise<SalidaChat> {
       // cada pantalla (cámara, configurador, contrato, declaraciones) abre en su
       // turno y el flujo espera a que el usuario la complete.
       tool_choice: uiAccion ? "none" : "auto",
-      temperature: 0.7,
+      temperature: 0.4,
     });
 
     const msg = resp.choices[0].message;
