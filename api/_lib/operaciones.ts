@@ -288,6 +288,14 @@ export function calcularCuotaFrecuencia(e: Estado, args: { monto: number; frecue
   };
 }
 
+/** Abre la pantalla de análisis del historial de remesas (el sistema "consulta" los registros). */
+export function mostrarAnalisisRemesas() {
+  return {
+    uiAccion: "analisisRemesas",
+    nota: "Se está mostrando en pantalla el análisis del historial de remesas del usuario (consultando registros de Chispa y de Banco GyT Continental). Espera el evento del sistema con el resultado; no inventes el historial ni los montos por texto.",
+  };
+}
+
 /** Abre el configurador de préstamo en la UI (slider + frecuencia + N.º de pagos). */
 export function mostrarConfigurador(e: Estado) {
   return {

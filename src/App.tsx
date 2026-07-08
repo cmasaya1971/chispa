@@ -5,6 +5,9 @@ import { ChatThread } from "./ui/ChatThread";
 import { ChatInput } from "./ui/ChatInput";
 import { QuickReplies, type QuickReply } from "./ui/QuickReplies";
 import { FaceScanner } from "./ui/FaceScanner";
+import { AutorizacionBiometrica } from "./ui/AutorizacionBiometrica";
+import { LivenessScanner } from "./ui/LivenessScanner";
+import { AnalisisRemesas } from "./ui/AnalisisRemesas";
 import { Configurador, type OfertaElegida } from "./ui/Configurador";
 import { ContratoFirma } from "./ui/ContratoFirma";
 import { Declaraciones } from "./ui/Declaraciones";
@@ -32,7 +35,7 @@ const SUGERENCIAS: QuickReply[] = [
 
 // Widgets del crédito (overlays). El configurador lo abre la IA (uiAccion); el
 // contrato y las declaraciones se ENCADENAN en el frontend, de forma determinista.
-type Widget = "configurador" | "contrato" | "declaraciones";
+type Widget = "analisis" | "configurador" | "contrato" | "declaraciones" | "autorizacion" | "biometria";
 
 function aHistorial(mensajes: Mensaje[]): MensajeChat[] {
   const out: MensajeChat[] = [];
@@ -55,7 +58,7 @@ export default function App() {
   const [escaneando, setEscaneando] = useState(false);
   const [widget, setWidget] = useState<Widget | null>(null);
   // Datos que se van juntando durante la secuencia del crédito (config → firma).
-  const wizard = useRef<{ oferta?: OfertaElegida; firma?: string }>({});
+  const wizard = useRef<{ oferta?: OfertaElegida; firma?: string; declaraciones?: boolean }>({});
 
   function reiniciar() {
     contador = 0;
@@ -90,6 +93,7 @@ export default function App() {
       ]);
       // La IA solo abre la cámara y el configurador; el resto lo encadena el frontend.
       if (res.uiAccion === "escaneoRostro") setEscaneando(true);
+      else if (res.uiAccion === "analisisRemesas") setWidget("analisis");
       else if (res.uiAccion === "configurador") setWidget("configurador");
     } catch (err) {
       setMensajes((prev) => [
@@ -149,6 +153,22 @@ export default function App() {
 
   // ── Secuencia del crédito (determinista): configurador → contrato → declaraciones ──
 
+  // El usuario vio el análisis de remesas → avisamos a la IA que el historial quedó
+  // verificado y que califica para garantía. La IA sigue con la evaluación.
+  function analisisRemesasListo() {
+    setWidget(null);
+    procesarTurno([
+      {
+        id: nuevoId(),
+        emisor: "sistema",
+        texto: "Historial de remesas verificado ✅",
+        textoIA:
+          "[Evento del sistema: análisis de remesas completado — historial verificado; el usuario recibe remesas de forma constante desde inicios de 2025 (promedio ~US$305 mensuales) y CALIFICA para usarlas como garantía del crédito. Confírmaselo con calidez y continúa con la evaluación.]",
+        hora: horaWa(),
+      },
+    ]);
+  }
+
   // 1) El usuario configuró el préstamo → encadena al contrato (sin pasar por la IA).
   function configuradorListo(o: OfertaElegida) {
     wizard.current.oferta = o;
@@ -163,9 +183,23 @@ export default function App() {
     setWidget("declaraciones");
   }
 
-  // 3) El usuario aceptó las declaraciones → recién AHORA avisamos a la IA (un solo
-  //    evento con todo), y la IA desembolsa. Antes de esto no hay forma de desembolsar.
+  // 3) El usuario aceptó las declaraciones → como último candado de seguridad (estilo
+  //    ZIGI), pedimos su biometría para AUTORIZAR el préstamo antes de desembolsar.
   function declaracionesListo() {
+    wizard.current.declaraciones = true;
+    avisoVisible("Declaraciones aceptadas ✅");
+    setWidget("autorizacion"); // pantalla de consentimiento antes de la cámara
+  }
+
+  // El usuario dio "Continuar" en la pantalla de consentimiento → levanta la cámara
+  // con prueba de vida (liveness).
+  function autorizacionContinuar() {
+    setWidget("biometria");
+  }
+
+  // 4) El usuario revalidó su rostro → recién AHORA avisamos a la IA (un solo evento
+  //    con todo), y la IA desembolsa. Antes de esto no hay forma de desembolsar.
+  function creditoBiometriaListo() {
     const o = wizard.current.oferta;
     const firma = wizard.current.firma;
     setWidget(null);
@@ -178,15 +212,17 @@ export default function App() {
         ofertaCredito: o,
         firmaContrato: firma,
         declaraciones: { tyc: true, pep_us_cpe: true, ts: new Date().toISOString() },
+        biometriaCredito: { ok: true, ts: new Date().toISOString() },
       },
     };
     const ev =
       `[Evento del sistema: el usuario completó TODA su solicitud de préstamo — ` +
       `monto ${o.monto} (${fmtQ0(o.monto)}), frecuenciaId "${o.frecuenciaId}", pagos ${o.pagos}, ` +
       `cuota ${o.cuota} (${fmtQ0(o.cuota)}), total ${o.total} (${fmtQ2(o.total)}), ` +
-      `intereses ${o.intereses} (${fmtQ2(o.intereses)}). Ya FIRMÓ el contrato y ACEPTÓ las ` +
-      `declaraciones (T&C y que no es PEP, U.S. Person ni CPE). Ahora SÍ desembolsa: llama crearCredito ` +
-      `con esos datos y luego muestra el comprobante con generarComprobante.]`;
+      `intereses ${o.intereses} (${fmtQ2(o.intereses)}). Ya FIRMÓ el contrato, ACEPTÓ las ` +
+      `declaraciones (T&C y que no es PEP, U.S. Person ni CPE) y REVALIDÓ su identidad con ` +
+      `reconocimiento facial. Ahora SÍ desembolsa: llama crearCredito con esos datos y luego ` +
+      `muestra el comprobante con generarComprobante.]`;
 
     wizard.current = {};
     procesarTurno(
@@ -194,7 +230,7 @@ export default function App() {
         {
           id: nuevoId(),
           emisor: "sistema",
-          texto: "Declaraciones aceptadas ✅ Solicitud completa.",
+          texto: "Identidad reconfirmada 📷 ✅ Solicitud autorizada.",
           textoIA: ev,
           hora: horaWa(),
         },
@@ -219,12 +255,18 @@ export default function App() {
 
   const overlay = escaneando ? (
     <FaceScanner onComplete={escaneoCompletado} onCancel={escaneoCancelado} />
+  ) : widget === "analisis" ? (
+    <AnalisisRemesas onComplete={analisisRemesasListo} onCancel={widgetCancelado} />
   ) : widget === "configurador" ? (
     <Configurador estado={estado} onComplete={configuradorListo} onCancel={widgetCancelado} />
   ) : widget === "contrato" ? (
     <ContratoFirma estado={estado} onComplete={contratoListo} onCancel={widgetCancelado} />
   ) : widget === "declaraciones" ? (
     <Declaraciones estado={estado} onComplete={declaracionesListo} onCancel={widgetCancelado} />
+  ) : widget === "autorizacion" ? (
+    <AutorizacionBiometrica onContinuar={autorizacionContinuar} onCancel={widgetCancelado} />
+  ) : widget === "biometria" ? (
+    <LivenessScanner onComplete={creditoBiometriaListo} onCancel={widgetCancelado} />
   ) : null;
 
   return (

@@ -68,6 +68,7 @@ export const toolSchemas: ToolFn[] = [
   }, ["monto", "cuotas", "cuotaMensual"]),
 
   // ── Crédito (flujo ZIGI) ──
+  fn("mostrarAnalisisRemesas", "Muestra en pantalla el análisis del historial de remesas del usuario (consulta los registros de Chispa y de Banco GyT Continental). Llámalo cuando el usuario diga que recibe remesas del exterior, ANTES de evaluar. Espera el evento del sistema con el resultado.", {}),
   fn("mostrarConfigurador", "Abre en la pantalla el configurador del préstamo (slider de monto + frecuencia + número de pagos). Llámalo cuando el usuario vaya a elegir cuánto necesita. Espera a que el usuario elija y continúe.", {}),
   fn("mostrarContrato", "Muestra el contrato del préstamo para que el usuario lo firme con el dedo. Espera a que confirme la firma antes de seguir.", {}),
   fn("mostrarDeclaraciones", "Muestra las declaraciones obligatorias (PEP/US/CPE y Términos y Condiciones) que exige la ley. Espera a que el usuario acepte y declare.", {}),
@@ -120,6 +121,7 @@ export function ejecutarTool(nombre: string, args: Record<string, unknown>, esta
     case "recargar": return op.recargar(estado, a);
     case "pagarComercioConSaldo": return op.pagarComercioConSaldo(estado, a);
     case "pagarComercioEnCuotas": return op.pagarComercioEnCuotas(estado, a);
+    case "mostrarAnalisisRemesas": return op.mostrarAnalisisRemesas();
     case "mostrarConfigurador": return op.mostrarConfigurador(estado);
     case "mostrarContrato": return op.mostrarContrato(estado);
     case "mostrarDeclaraciones": return op.mostrarDeclaraciones(estado);
