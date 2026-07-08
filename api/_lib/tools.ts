@@ -24,15 +24,10 @@ export const toolSchemas: ToolFn[] = [
   fn("datosCredito", "Devuelve los datos para evaluar un crédito: ingreso promedio del usuario, línea aprobada, tasa mensual y plazos. Úsalo SIEMPRE antes de ofrecer un crédito; nunca inventes estos números.", {}),
 
   // ── Cálculo ──
-  fn("calcularCuota", "Calcula la cuota mensual (amortización francesa) para un monto y plazo en meses.", {
-    monto: { type: "number", description: "Monto del crédito en quetzales." },
-    plazoMeses: { type: "number", description: "Plazo en meses (3, 6 o 12)." },
-  }, ["monto", "plazoMeses"]),
-  fn("calcularCuotaFrecuencia", "Calcula cuota, total a pagar e intereses de un préstamo según la FRECUENCIA de pago (semanal/quincenal/mensual) y el número de pagos. Úsalo para el configurador ZIGI. Nunca inventes estos números.", {
-    monto: { type: "number", description: "Monto del crédito en quetzales." },
-    frecuenciaId: { type: "string", description: "'mensual' | 'quincenal' | 'semanal'." },
-    pagos: { type: "number", description: "Número de pagos elegido." },
-  }, ["monto", "frecuenciaId", "pagos"]),
+  // (El cálculo de la cuota del crédito lo hace el configurador en pantalla; por
+  //  eso NO se exponen calcularCuota/calcularCuotaFrecuencia como tools: así el
+  //  modelo no puede resolver el préstamo por texto y se ve forzado a abrir el
+  //  configurador. Las funciones siguen existiendo en operaciones.ts.)
 
   // ── Mutación de saldo ──
   fn("acreditarMonedero", "Acredita (suma) un monto al monedero y registra el movimiento. Requiere confirmación previa del usuario.", {

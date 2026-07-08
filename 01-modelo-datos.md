@@ -18,7 +18,7 @@ Ver `chispa_mock_data.json`. Bloques clave:
 
 | Bloque | Contenido |
 |---|---|
-| `sesion` | `{ autenticada }` — el gate de acceso (A10) la pone en `true`. |
+| `sesion` | Semilla: `{ autenticada }`. En runtime, el flujo de crédito agrega estado de trabajo: `montoSolicitado`, `frecuencia`, `pagos`, `cuota`, `total`, `intereses`, `firma` (dataURL), `declaraciones`, `biometria`. Se limpian al reiniciar. |
 | `usuario` | nombre (completo / cuenta / corto), DPI, teléfono, municipio, `ingresoPromedio`. |
 | `monedero` | `numeroCuenta`, `nombre`, **`saldo`** (el número que muta en toda la demo). |
 | `tasaCambio` | `quetzalPorUsd` (7.62), fuente Banguat. |
@@ -67,10 +67,17 @@ Puras sobre `estado`; deterministas; sin red.
 - `debitarMonedero(monto, concepto, fecha?)` → `saldo -= monto`; antepone movimiento `-monto`
 - `saldoAlcanza(monto)` → `saldo >= monto`
 
-### Crédito
-- `calcularCuota(P, n, i = credito.tasaMensual)` → amortización francesa: `P·i / (1 − (1+i)^(−n))`, redondeo a entero Q.
-  Verificado: `calcularCuota(2000,3)=734`, `(2000,6)=394`, `(2000,12)=226`.
-- `crearCredito({ monto, plazoMeses, tasaMensual, cuota, primeraCuotaVence })` → agrega a `creditos[]` con `saldoPendiente = monto`.
+### Crédito (flujo estilo ZIGI: configurar → autorizar → desembolsar)
+- `tasaPeriodo(frecuencia)` → `credito.tasaMensual × frecuencia.mesesPorPeriodo` (Mensual 5%, Quincenal 2.5%, Semanal 1.25%).
+- `calcularCuota(P, n, i)` → amortización francesa: `P·i / (1 − (1+i)^(−n))`, redondeo a entero Q. Con `i = tasaPeriodo`.
+  Verificado (Mensual, i=5%): `calcularCuota(2000,3,0.05)=734`, `(2000,6,0.05)=394`, `(2000,12,0.05)=226`.
+- `recalcularOferta()` → recalcula `cuota`, `total = cuota×pagos`, `intereses = total−monto` cada vez que cambia monto/frecuencia/pagos en el configurador.
+- `firmarContrato(dataURL)` → guarda el trazo de la firma (imagen en memoria) en `sesion.firma`.
+- `registrarDeclaraciones()` → guarda `sesion.declaraciones = { tyc:true, pep_us_cpe:true, ts: <timestamp> }` (rastro de auditoría para IVE).
+- `capturarBiometria()` → marca `sesion.biometria = { ok:true, ts }` (captura simulada, sin cámara).
+- `crearCredito({ monto, frecuencia, pagos, tasaMensual, cuota, total, intereses, primeraCuotaVence, metodoPago, firma, declaraciones, biometria })` → agrega a `creditos[]` con `saldoPendiente = total`, `pagado = 0`, y toda la evidencia de autorización (firma, declaraciones, biometría).
+- `pagarCuota(creditoId)` → `debitarMonedero(cuota, "Pago de cuota crédito")`; `pagado += cuota`; `saldoPendiente -= cuota` (para #8, ver `monedero.md`).
+- `descargarComprobante()` / `compartirComprobante()` → acciones simuladas (PDF), sin backend.
 
 ### Remesa
 - `cobrarRemesa()` → toma `remesa.disponible`, calcula `Q = montoUsd × tasaCambio.quetzalPorUsd`, `acreditarMonedero(Q, "Remesa de "+remitente)`, pone `remesa.disponible = null`. (US$300 × 7.62 = Q2,286.00)

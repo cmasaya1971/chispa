@@ -53,14 +53,19 @@ export async function procesarChat(entrada: EntradaChat): Promise<SalidaChat> {
       model,
       messages: convo,
       tools: toolSchemas,
-      tool_choice: "auto",
+      // Apenas un widget/cámara queda pendiente (uiAccion), forzamos SOLO texto:
+      // el modelo escribe la frase de presentación y NO encadena más pasos. Así
+      // cada pantalla (cámara, configurador, contrato, declaraciones) abre en su
+      // turno y el flujo espera a que el usuario la complete.
+      tool_choice: uiAccion ? "none" : "auto",
       temperature: 0.7,
     });
 
     const msg = resp.choices[0].message;
     convo.push(msg);
 
-    if (msg.tool_calls && msg.tool_calls.length > 0) {
+    // Solo ejecutamos tools si todavía no hay un widget pendiente en este turno.
+    if (msg.tool_calls && msg.tool_calls.length > 0 && !uiAccion) {
       for (const tc of msg.tool_calls) {
         if (tc.type !== "function") continue;
         let args: Record<string, unknown> = {};
@@ -72,7 +77,8 @@ export async function procesarChat(entrada: EntradaChat): Promise<SalidaChat> {
         toolsUsadas.push(tc.function.name);
         const resultado = ejecutarTool(tc.function.name, args, estado);
         if (resultado && typeof resultado === "object" && "uiAccion" in resultado) {
-          uiAccion = (resultado as { uiAccion?: string }).uiAccion;
+          const ua = (resultado as { uiAccion?: string }).uiAccion;
+          if (ua) uiAccion = ua; // widget pendiente: en la próxima vuelta solo habrá texto
         }
         convo.push({
           role: "tool",
@@ -83,7 +89,7 @@ export async function procesarChat(entrada: EntradaChat): Promise<SalidaChat> {
       continue; // volver a llamar al modelo con los resultados
     }
 
-    // Respuesta final de texto
+    // Respuesta final de texto (incluye la frase que presenta un widget pendiente).
     return {
       mensaje: msg.content ?? "",
       estado,
@@ -94,11 +100,13 @@ export async function procesarChat(entrada: EntradaChat): Promise<SalidaChat> {
   }
 
   return {
-    mensaje: "Disculpá, ${nombre} — se me complicó procesar eso. ¿Lo intentamos de nuevo?".replace(
+    mensaje: "Disculpa, ${nombre} — se me complicó procesar eso. ¿Lo intentamos de nuevo?".replace(
       "${nombre}",
       estado.usuario.nombreCorto
     ),
     estado,
     toolsUsadas,
+    uiAccion,
+    adjuntos: construirAdjuntos(toolsUsadas, estado),
   };
 }

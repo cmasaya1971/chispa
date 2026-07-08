@@ -4,7 +4,7 @@
 |---|---|
 | **Código** | `monedero` |
 | **Nombre** | Monedero |
-| **Funcionalidades** | **B1** Consulta de saldo · **B3** Movimientos + estado de cuenta (PDF) |
+| **Funcionalidades** | **B1** Consulta de saldo · **B3** Movimientos + estado de cuenta (PDF) · **Crédito activo + pagar cuota** (#8) |
 | **Precondición** | `requiereAuth` (gate `acceso`/A10) — B1 es la primera acción sensible típica |
 | **Copy** | Validado. Fuente: §3.3 "Acceso — A10" (tarjeta de cuenta) y "Monedero — B1·B3" (imagen). |
 
@@ -135,3 +135,54 @@ Ninguno muta datos (solo lectura). "Descargar estado de cuenta (PDF)" es una **a
 3. El botón de PDF muestra un aviso simulado, sin romper la demo ni mutar datos.
 4. El saldo mostrado refleja el estado vivo (persistencia entre flujos).
 5. Copy idéntico al validado.
+
+---
+
+## 7. Crédito activo + pagar cuota (#8)
+
+Después de tomar un crédito (ver `credito.md`), el usuario puede administrarlo y pagarlo desde el Monedero. Muestra el otro lado del ciclo: la deuda viva.
+
+**Disparo:** botón "Ver mi crédito" en la tarjeta de saldo (aparece solo si `creditos[]` no está vacío) o texto "quiero pagar mi crédito" / "cuánto debo".
+
+**Copy (nuevo — tono Chispa, pendiente de validación):**
+- Chispa: "Este es tu crédito activo:"
+- Card **`CreditoActivoCard`**: "Debés **{{saldoPendiente|Q2}}** de **{{total|Q2}}**. Pagaste **{{pagado|Q2}}**." · barra de progreso · "Próxima cuota **{{cuota|Q2}}**, vence {{fechaPrimeraCuota}}." · [ Pagar cuota ]
+- Al pagar: "¡Listo! Pagaste tu cuota de **{{cuota|Q2}}**. Te quedan **{{saldoPendiente|Q2}}** por pagar. Tu saldo ahora es **{{saldo|Q2}}**."
+
+**Máquina (fragmento, se integra al flujo `monedero`):**
+
+```ts
+creditoActivo: {
+  id: "creditoActivo",
+  alEntrar: [
+    { tipo: "burbuja", texto: "Este es tu crédito activo:" },
+    { tipo: "tarjeta", tarjeta: {
+        componente: "CreditoActivoCard",
+        credito: "creditos[0]",  // saldoPendiente, total, pagado, cuota, fechaPrimeraCuota
+    }, datos: ["creditos[0]"] },
+  ],
+  respuestasRapidas: [ { id: "pagar_cuota", label: "Pagar cuota" } ],
+  transiciones: [
+    { cuando: { respuestaRapida: "pagar_cuota" }, efectos: [{ op: "pagarCuota", creditoId: "creditos[0].id" }], irA: "cuotaPagada" },
+    { cuando: { keywords: ["pagar", "pagá", "cuota", "abonar"] }, efectos: [{ op: "pagarCuota", creditoId: "creditos[0].id" }], irA: "cuotaPagada" },
+  ],
+},
+
+cuotaPagada: {
+  id: "cuotaPagada", final: true,
+  alEntrar: [
+    { tipo: "burbuja",
+      texto: "¡Listo! Pagaste tu cuota de **{{cuota|Q2}}**. Te quedan **{{saldoPendiente|Q2}}** por pagar. Tu saldo ahora es **{{saldo|Q2}}**.",
+      datos: ["pagarCuota debitó la cuota y avanzó el progreso"] },
+  ],
+  transiciones: [],
+},
+```
+
+**Efectos:** `pagarCuota(creditoId)` → `debitarMonedero(cuota, "Pago de cuota crédito")`; `pagado += cuota`; `saldoPendiente -= cuota`. Con el crédito de oro (Q2,000/6/Q394) y saldo tras desembolso Q3,250.00: pagar una cuota deja saldo Q2,856.00, saldoPendiente Q1,970 (de Q2,364), pagado Q394.
+
+**Criterios de aceptación (#8):**
+1. La opción "Ver mi crédito" aparece solo cuando hay un crédito activo.
+2. La tarjeta muestra deuda pendiente, total, pagado, barra de progreso y próxima cuota, todo desde `creditos[]`.
+3. "Pagar cuota" debita la cuota del monedero, avanza el progreso y baja el saldo (persistente).
+4. Copy en tono Chispa (pendiente de validación).

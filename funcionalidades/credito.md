@@ -4,39 +4,33 @@
 |---|---|
 | **Código** | `credito` |
 | **Nombre** | Crédito |
-| **Funcionalidades** | **D1** Solicitud por chat · **D2** Evaluación automática · **D3** Oferta personalizada · **D4** Desembolso instantáneo |
-| **Precondición** | Requiere sesión autenticada (gate `acceso` / A10 — es acción sensible) |
-| **Copy** | Validado. Fuente: documento maestro §3.3, "Crédito — D1·D2·D3·D4" (imagen de conversación) |
+| **Funcionalidades** | **D1** Solicitud · **D2** Evaluación automática · **D3** Configuración monto/plan · **Confirmación** · **Contrato + firma** · **Declaraciones (IVE)** · **Biometría** · **D4** Desembolso · **Comprobante** |
+| **Base de referencia** | Flujo de autorización y desembolso de **ZIGI** (receta de mercado), traducido a conversación WhatsApp. |
+| **Copy** | D1 y D2: **validados** (documento §3.3). Del configurador en adelante: **copy nuevo — pendiente de validación** (redactado en tono Chispa). |
 
-> **Esta ficha es el MOLDE.** Los otros seis flujos se replican con esta misma estructura. Validar aquí la plantilla antes de continuar.
-
----
-
-## 1. Lógica (del documento maestro §3.3)
-
-El usuario pide un préstamo (**D1**); Chispa pregunta su fuente de ingreso y evalúa con la remesa recurrente más el historial del sistema financiero — SIB/Verifiquemos (**D2**). Si aprueba, ofrece el monto elegido, una tasa de **5% mensual** (realista para microcrédito) y el plazo con su cuota (**D3**); al aceptar, desembolsa al monedero al instante (**D4**).
+> **Esta ficha reemplaza la versión conversacional simple anterior.** Ahora tiene espina regulatoria de banco (declaraciones IVE, contrato firmado, biometría) + transparencia de costo estilo ZIGI, manteniendo el formato de chat y el número de oro validado (Q2,000 / Mensual / 6 pagos → cuota **Q394**).
 
 ---
 
-## 2. Precondición: gate de autenticación
-
-Solicitar un crédito es una acción sensible. Antes del estado inicial:
+## 1. Secuencia completa
 
 ```
-si NO sesion.autenticada:
-    ejecutar flujo `acceso` (A10 · rostro validado contra RENAP)
-    al validar → sesion.autenticada = true → continuar en estado `solicitud`
-si YA autenticada:
-    entrar directo a `solicitud` (no se vuelve a pedir el rostro en la sesión)
+D1 solicitud ─▶ D2 evaluación ─▶ D3 configurador (slider + frecuencia + N.º pagos + Total a pagar)
+   ─▶ confirmación ─▶ contrato + firma con el dedo ─▶ declaraciones PEP/US/CPE + T&C
+   ─▶ biometría (rostro) ─▶ D4 desembolso ─▶ comprobante descargable
 ```
 
-El motor resuelve esto vía `precondiciones: [{ tipo: "requiereAuth", flujoGate: "acceso" }]`. **No se re-implementa el rostro aquí**; se invoca el flujo `acceso`.
+Decisiones del cliente incorporadas: transparencia de costo (A/#1), declaraciones PEP/CPE/US requisito IVE (#2), contrato con **firma con el dedo** (#3), **biometría para autorizar** (#4), paso de confirmación (#5), comprobante (#6), método de pago débito automático + pago adelantado (#7), configurador tipo app con slider/frecuencia/pagos (#9). Crédito activo + pagar → ver `monedero.md` (#8).
 
 ---
 
-## 3. Copy validado — transcripción literal
+## 2. Autenticación (cambia respecto a la versión previa)
 
-> Transcripción carácter por carácter de la conversación validada. `**negrita**` = negrita de WhatsApp tal como aparece validada. **No modificar.**
+La **biometría se hace dentro del flujo, al autorizar** (paso `biometria`), tal como ZIGI. Por eso este flujo **ya no usa la precondición A10**: la captura de rostro en `biometria` autentica la sesión (`autenticar()`) *y* autoriza el préstamo. A10 sigue siendo el gate de los demás flujos (saldo, remesa, pagos).
+
+---
+
+## 3. Copy validado (D1–D2) — literal, no reescribir
 
 | # | Emisor | Texto |
 |---|---|---|
@@ -44,150 +38,241 @@ El motor resuelve esto vía `precondiciones: [{ tipo: "requiereAuth", flujoGate:
 | 2 | Chispa | Con gusto, José. Para conocerte mejor, contame: ¿cuál es tu principal fuente de ingresos? |
 | 3 | Usuario | Todos los meses recibo una remesa de mi hermano en Estados Unidos |
 | 4 | Chispa | ¡Perfecto! Justo veo tus remesas de los últimos meses. Tu ingreso promedio es **Q2,325**, así que calificás hasta **Q3,000**. ¿Cuánto ocupás? |
-| 5 | Usuario | Q2,000 está bien |
-| 6 | Chispa | Perfecto, **Q2,000** a una tasa de **5% mensual**. Elegí el plazo:<br>▸ 3 meses — **Q734 / mes**<br>▸ 6 meses (elegido) — **Q394 / mes**<br>▸ 12 meses — **Q226 / mes**<br>Con **6 meses**, tu cuota es **Q394** al mes. ¿Lo aceptás? |
-| 7 | Usuario | Sí, acepto |
-| 8 | Chispa | ¡Listo! Deposité **Q2,000** en tu monedero. Tu saldo pasó de Q1,250 a **Q3,250.00**. Tu primera cuota de Q394 vence el 1 de agosto. |
 
-**Procedencia de cada número (todo sale del mock):**
-
-- `Q2,325` = `usuario.ingresoPromedio` · `Q3,000` = `credito.lineaAprobada`
-- `Q2,000` = monto elegido por el usuario (paso 5)
-- `5% mensual` = `credito.tasaMensual` (0.05)
-- Cuotas `Q734 / Q394 / Q226` = `calcularCuota(2000, plazo)` para plazos 3/6/12 (ver §5)
-- `Q1,250` = saldo antes · `Q3,250.00` = saldo después de acreditar Q2,000
-- `1 de agosto` = `credito.fechaPrimeraCuota` (constante de demo, ver §6)
+*(Procedencia: `usuario.nombreCorto`, `usuario.ingresoPromedio`, `credito.lineaAprobada`.)*
 
 ---
 
-## 4. Máquina de estados (declarativa — esto es lo que consume el motor)
+## 4. Copy nuevo (pendiente de validación) — tono Chispa
+
+**D3 · Configurador**
+- Chispa: "Perfecto. Configurá tu préstamo a tu medida:"
+- Card **"¿Cuánto necesitás?"** con slider Q100–Q3,000 (default **Q2,000**), selector de **frecuencia** (Semanal / Quincenal / **Mensual**) y **N.º de pagos** (Mensual: 3 / **6** / 12). Muestra en vivo: **Cuota Q394 / mes** y **Total a pagar Q2,364** con nota "Q2,000 + Q364 de intereses (5% mensual)".
+
+**Confirmación**
+- Chispa: "Revisá y confirmá tu préstamo:"
+- Card **"Confirmá tu préstamo"**: Estás pidiendo **Q2,000** [Editar] · Intereses **Q364** · **Total a pagar Q2,364** · Solicitante **José M. García López** · **6 pagos de Q394** · Primer pago **1 de agosto** · Método: **Débito automático de tu monedero** (podés adelantar pagos) · [ Ver contrato del préstamo → ]
+
+**Contrato + firma**
+- Chispa: "Este es tu contrato. Leelo y, si estás de acuerdo, firmalo con tu dedo."
+- Card contrato (formas de pago · costo · "te enviamos el pagaré, el plan de pagos y los T&C a tu correo") + **SignaturePad** ("Firmá aquí con tu dedo").
+
+**Declaraciones (IVE)**
+- Chispa: "Antes de desembolsar, necesito dos confirmaciones que nos pide la ley:"
+- Card con dos casillas: (1) "Confirmo que he leído y acepto los Términos y Condiciones" · (2) "Confirmo que no soy Persona Expuesta Políticamente (PEP), Persona Estadounidense, ni Proveedor del Estado (CPE)". Info expandible: **¿Qué es PEP?** · **¿U.S. Person?** · **¿CPE?**
+
+**Biometría**
+- Chispa: "Solo falta validar tu identidad con una foto. Buscá un lugar con buena luz y no te movás." → captura simulada (círculo + progreso) → "¡Identidad confirmada con RENAP!"
+
+**D4 · Desembolso (copy validado, preservado)**
+- Chispa: "¡Listo! Deposité **Q2,000** en tu monedero. Tu saldo pasó de Q1,250 a **Q3,250.00**. Tu primera cuota de Q394 vence el 1 de agosto."
+
+**Comprobante**
+- Chispa: "Acá está tu comprobante:"
+- Card **"Préstamo depositado"**: fecha/hora · **Total a pagar Q2,364** · Monto solicitado **Q2,000** · Facturar a **José Manuel García López** · DPI **2547 89632 0101** · Intereses **Q364** · **6 pagos de Q394** · Forma de pago **Débito mensual automático** · Primera cuota **1 de agosto** · firma del usuario · [ Descargar ] [ Compartir ].
+
+---
+
+## 5. Máquina de estados (declarativa)
 
 ```ts
 const flujoCredito: Flujo = {
   codigo: "credito",
   nombre: "Crédito",
   funcionalidades: ["D1", "D2", "D3", "D4"],
-  precondiciones: [{ tipo: "requiereAuth", flujoGate: "acceso" }],
-
+  // sin precondición A10: la biometría in-flow autentica y autoriza
   disparador: {
     ctaMenu: "menu_credito",
-    keywords: ["prestamo", "préstamo", "crédito", "credito", "necesito plata", "quiero un prestamo"],
-    // la burbuja del usuario al iniciar por CTA es: "Necesito un préstamo"
+    keywords: ["prestamo", "préstamo", "crédito", "credito", "necesito plata"],
+    // burbuja del usuario al iniciar por CTA: "Necesito un préstamo"
   },
-
   estadoInicial: "solicitud",
-
   estados: {
 
-    // ── D1 · Solicitud por chat ──────────────────────────────
+    // ── D1 · Solicitud (validado) ────────────────────────────
     solicitud: {
-      id: "solicitud",
-      funcionalidad: "D1",
+      id: "solicitud", funcionalidad: "D1",
       alEntrar: [
-        { tipo: "burbuja",
-          texto: "Con gusto, José. Para conocerte mejor, contame: ¿cuál es tu principal fuente de ingresos?",
+        { tipo: "burbuja", texto: "Con gusto, José. Para conocerte mejor, contame: ¿cuál es tu principal fuente de ingresos?",
           datos: ["usuario.nombreCorto=José"] },
       ],
       respuestasRapidas: [
-        { id: "fuente_remesa",
-          label: "Recibo una remesa del exterior",
+        { id: "fuente_remesa", label: "Recibo una remesa del exterior",
           insertaBurbujaUsuario: "Todos los meses recibo una remesa de mi hermano en Estados Unidos" },
       ],
       esperaTexto: true,
       transiciones: [
         { cuando: { respuestaRapida: "fuente_remesa" }, irA: "evaluacion" },
-        { cuando: { keywords: ["remesa", "hermano", "exterior", "estados unidos", "eeuu", "usa"] },
-          irA: "evaluacion" },
-        // porDefecto: repreguntar suave (opcional) — ver §7 decisión (a)
+        { cuando: { keywords: ["remesa", "hermano", "exterior", "estados unidos", "eeuu"] }, irA: "evaluacion" },
       ],
     },
 
-    // ── D2 · Evaluación automática ───────────────────────────
+    // ── D2 · Evaluación (validado) ───────────────────────────
     evaluacion: {
-      id: "evaluacion",
-      funcionalidad: "D2",
+      id: "evaluacion", funcionalidad: "D2",
       alEntrar: [
-        { tipo: "burbuja",
-          texto: "¡Perfecto! Justo veo tus remesas de los últimos meses. Tu ingreso promedio es **Q2,325**, así que calificás hasta **Q3,000**. ¿Cuánto ocupás?",
+        { tipo: "burbuja", texto: "¡Perfecto! Justo veo tus remesas de los últimos meses. Tu ingreso promedio es **Q2,325**, así que calificás hasta **Q3,000**. ¿Cuánto ocupás?",
           datos: ["usuario.ingresoPromedio=2325", "credito.lineaAprobada=3000"] },
+        { tipo: "burbuja", texto: "Perfecto. Configurá tu préstamo a tu medida:" },
       ],
-      respuestasRapidas: [
-        { id: "monto_2000", label: "Q2,000", insertaBurbujaUsuario: "Q2,000 está bien" }, // camino validado
-        { id: "monto_1000", label: "Q1,000" },
-        { id: "monto_3000", label: "Q3,000" },
-      ],
-      esperaTexto: true,
-      transiciones: [
-        { cuando: { respuestaRapida: "monto_2000" }, efectos: [{ op: "set", ruta: "sesion.montoSolicitado", valor: 2000 }], irA: "oferta" },
-        { cuando: { respuestaRapida: "monto_1000" }, efectos: [{ op: "set", ruta: "sesion.montoSolicitado", valor: 1000 }], irA: "oferta" },
-        { cuando: { respuestaRapida: "monto_3000" }, efectos: [{ op: "set", ruta: "sesion.montoSolicitado", valor: 3000 }], irA: "oferta" },
-        { cuando: { keywords: ["2000", "2,000", "2 mil", "dos mil"] }, efectos: [{ op: "set", ruta: "sesion.montoSolicitado", valor: 2000 }], irA: "oferta" },
-        // texto libre con número ≤ lineaAprobada → set montoSolicitado → oferta (motor parsea monto)
-      ],
+      transiciones: [{ cuando: { porDefecto: true }, irA: "configurador" }],
     },
 
-    // ── D3 · Oferta personalizada ────────────────────────────
-    oferta: {
-      id: "oferta",
-      funcionalidad: "D3",
-      // plazoSeleccionado por defecto = 6 (camino validado). Tocar un plazo lo cambia y re-renderiza.
+    // ── D3 · Configurador (nuevo · #9 + #1) ──────────────────
+    configurador: {
+      id: "configurador", funcionalidad: "D3",
+      // estado de sesión: monto=montoDefault(2000), frecuencia=mensual, pagos=6
       alEntrar: [
-        { tipo: "tarjeta",
-          tarjeta: {
-            encabezado: "Perfecto, **Q2,000** a una tasa de **5% mensual**. Elegí el plazo:",
-            opciones: [
-              { plazoMeses: 3,  etiqueta: "3 meses",  valor: "**Q734 / mes**" },
-              { plazoMeses: 6,  etiqueta: "6 meses",  valor: "**Q394 / mes**", seleccionado: true },
-              { plazoMeses: 12, etiqueta: "12 meses", valor: "**Q226 / mes**" },
-            ],
-            pie: "Con **6 meses**, tu cuota es **Q394** al mes. ¿Lo aceptás?",
-          },
-          datos: ["sesion.montoSolicitado=2000", "credito.tasaMensual=0.05",
-                  "cuota=calcularCuota(monto, plazoSeleccionado)"] },
+        { tipo: "tarjeta", tarjeta: {
+            titulo: "¿Cuánto necesitás?",
+            slider: { min: "credito.montoMin", max: "credito.montoMax", valor: "credito.montoDefault", paso: 50, formato: "Q0" },
+            selectorFrecuencia: { opciones: "credito.frecuencias", valor: "credito.frecuenciaDefault" },
+            selectorPagos: { opciones: "según frecuencia.pagosOpciones", valor: "frecuencia.pagosDefault" },
+            resumen: {
+              cuota: "**{{cuota|Q0}} / {{unidadFrecuencia}}**",     // default: Q394 / mes
+              total: "Total a pagar **{{total|Q0}}**",              // default: Q2,364
+              nota: "{{monto|Q0}} + {{intereses|Q0}} de intereses (5% mensual)", // Q2,000 + Q364
+            },
+        }, datos: ["cuota=calcularCuota(monto, pagos, tasaPeriodo)", "total=cuota*pagos", "intereses=total-monto"] },
       ],
-      respuestasRapidas: [
-        { id: "plazo_3",  label: "3 meses" },
-        { id: "plazo_6",  label: "6 meses" },
-        { id: "plazo_12", label: "12 meses" },
-        { id: "aceptar",  label: "Sí, acepto", insertaBurbujaUsuario: "Sí, acepto" },
-      ],
-      esperaTexto: true,
+      respuestasRapidas: [ { id: "continuar", label: "Continuar" } ],
+      esperaTexto: false,
       transiciones: [
-        // cambiar de plazo: actualiza selección y el pie de la tarjeta; permanece en `oferta`
-        { cuando: { respuestaRapida: "plazo_3" },  efectos: [{ op: "set", ruta: "sesion.plazoSeleccionado", valor: 3 }],  irA: "oferta" },
-        { cuando: { respuestaRapida: "plazo_6" },  efectos: [{ op: "set", ruta: "sesion.plazoSeleccionado", valor: 6 }],  irA: "oferta" },
-        { cuando: { respuestaRapida: "plazo_12" }, efectos: [{ op: "set", ruta: "sesion.plazoSeleccionado", valor: 12 }], irA: "oferta" },
-        // aceptar: crea el crédito y desembolsa
-        { cuando: { respuestaRapida: "aceptar" },
-          efectos: [
-            { op: "crearCredito", monto: "$montoSolicitado", plazoMeses: "$plazoSeleccionado",
-              tasaMensual: 0.05, cuota: "$cuota", primeraCuotaVence: "credito.fechaPrimeraCuota" },
-            { op: "acreditarMonedero", monto: "$montoSolicitado" },
-          ],
-          irA: "desembolso" },
-        { cuando: { keywords: ["acepto", "si acepto", "sí", "si", "dale", "ok", "está bien", "de acuerdo"] },
-          efectos: [
-            { op: "crearCredito", monto: "$montoSolicitado", plazoMeses: "$plazoSeleccionado",
-              tasaMensual: 0.05, cuota: "$cuota", primeraCuotaVence: "credito.fechaPrimeraCuota" },
-            { op: "acreditarMonedero", monto: "$montoSolicitado" },
-          ],
-          irA: "desembolso" },
+        // cambios de slider/frecuencia/pagos re-renderizan el resumen y permanecen en `configurador`
+        { cuando: { evento: "cambioConfigurador" }, efectos: [{ op: "recalcularOferta" }], irA: "configurador" },
+        { cuando: { respuestaRapida: "continuar" }, irA: "confirmacion" },
       ],
     },
 
-    // ── D4 · Desembolso instantáneo ──────────────────────────
+    // ── Confirmación (nuevo · #5 + #1 + #7) ──────────────────
+    confirmacion: {
+      id: "confirmacion",
+      alEntrar: [
+        { tipo: "burbuja", texto: "Revisá y confirmá tu préstamo:" },
+        { tipo: "tarjeta", tarjeta: {
+            titulo: "Confirmá tu préstamo",
+            filas: [
+              { etiqueta: "Estás pidiendo", valor: "**{{monto|Q2}}**", accion: "Editar" },
+              { etiqueta: "Intereses", valor: "**{{intereses|Q2}}**" },
+              { etiqueta: "Total a pagar", valor: "**{{total|Q2}}**" },
+              { etiqueta: "Solicitante", valor: "**José M. García López**" },
+              { etiqueta: "Cantidad de pagos", valor: "**{{pagos}} pagos de {{cuota|Q2}}**" },
+              { etiqueta: "Fecha de primer pago", valor: "**{{fechaPrimeraCuota}}**" },
+            ],
+            metodoPago: "Débito automático de tu monedero · Podés adelantar pagos cuando querás",
+            enlaceContrato: "Ver contrato del préstamo",
+        }, datos: ["monto/intereses/total/pagos/cuota de la sesión", "credito.fechaPrimeraCuota", "credito.metodoPago", "credito.permitePagoAdelantado"] },
+      ],
+      respuestasRapidas: [
+        { id: "ver_contrato", label: "Ver contrato" },
+        { id: "editar", label: "Editar" },
+        { id: "confirmar", label: "Confirmar" },
+      ],
+      transiciones: [
+        { cuando: { respuestaRapida: "editar" }, irA: "configurador" },
+        { cuando: { respuestaRapida: "ver_contrato" }, irA: "contrato" },
+        { cuando: { respuestaRapida: "confirmar" }, irA: "contrato" },
+        { cuando: { keywords: ["confirmar", "confirmo", "si", "sí", "dale"] }, irA: "contrato" },
+      ],
+    },
+
+    // ── Contrato + firma (nuevo · #3) ────────────────────────
+    contrato: {
+      id: "contrato",
+      alEntrar: [
+        { tipo: "burbuja", texto: "Este es tu contrato. Leelo y, si estás de acuerdo, firmalo con tu dedo." },
+        { tipo: "tarjeta", tarjeta: {
+            titulo: "**Contrato del préstamo**",
+            contrato: "credito.contratoResumen",   // formasDePago · costo · documentos
+            firma: { tipo: "signaturePad", placeholder: "Firmá aquí con tu dedo" },
+        }, datos: ["credito.contratoResumen"] },
+      ],
+      respuestasRapidas: [ { id: "firmar", label: "Firmar y continuar", requiereFirma: true } ],
+      transiciones: [
+        // el efecto guarda el trazo de la firma (dataURL en memoria)
+        { cuando: { respuestaRapida: "firmar" }, efectos: [{ op: "firmarContrato" }], irA: "declaraciones" },
+      ],
+    },
+
+    // ── Declaraciones IVE (nuevo · #2) ───────────────────────
+    declaraciones: {
+      id: "declaraciones",
+      alEntrar: [
+        { tipo: "burbuja", texto: "Antes de desembolsar, necesito dos confirmaciones que nos pide la ley:" },
+        { tipo: "tarjeta", tarjeta: {
+            checklist: "credito.declaracionesRequeridas",  // tyc + pep_us_cpe
+            infoExpandible: { pep: "credito.infoDeclaraciones.pep", us_person: "credito.infoDeclaraciones.us_person", cpe: "credito.infoDeclaraciones.cpe" },
+        }, datos: ["credito.declaracionesRequeridas", "credito.infoDeclaraciones"] },
+      ],
+      respuestasRapidas: [ { id: "declarar", label: "Acepto y declaro", requiereChecklistCompleto: true } ],
+      transiciones: [
+        // registra declaraciones con timestamp (rastro de auditoría)
+        { cuando: { respuestaRapida: "declarar" }, efectos: [{ op: "registrarDeclaraciones" }], irA: "biometria" },
+      ],
+    },
+
+    // ── Biometría (nuevo · #4) ───────────────────────────────
+    biometria: {
+      id: "biometria",
+      alEntrar: [
+        { tipo: "burbuja", texto: "Solo falta validar tu identidad con una foto. Buscá un lugar con buena luz y no te movás." },
+        { tipo: "tarjeta", tarjeta: { biometria: { tipo: "capturaRostro", estilo: "circuloProgreso" } } },
+      ],
+      respuestasRapidas: [ { id: "validar_rostro", label: "Validar mi rostro" } ],
+      transiciones: [
+        { cuando: { respuestaRapida: "validar_rostro" },
+          efectos: [{ op: "capturarBiometria" }, { op: "autenticar" }], irA: "rostroOk" },
+      ],
+    },
+
+    rostroOk: {
+      id: "rostroOk",
+      alEntrar: [ { tipo: "tarjeta", tarjeta: { titulo: "**¡Identidad confirmada con RENAP!**" } } ],
+      transiciones: [{ cuando: { porDefecto: true }, irA: "desembolso" }],
+    },
+
+    // ── D4 · Desembolso (copy validado, parametrizado) ───────
     desembolso: {
-      id: "desembolso",
-      funcionalidad: "D4",
-      final: true,
+      id: "desembolso", funcionalidad: "D4",
       alEntrar: [
         { tipo: "burbuja",
-          // Saldo vivo: {{saldoAntes|Q0}} = saldo capturado antes de acreditar; {{saldo|Q2}} = saldo después.
-          // En semilla renderiza byte-idéntico al validado: "de Q1,250 a Q3,250.00". NO normalizar el formato mixto.
-          texto: "¡Listo! Deposité **Q2,000** en tu monedero. Tu saldo pasó de {{saldoAntes|Q0}} a **{{saldo|Q2}}**. Tu primera cuota de Q394 vence el 1 de agosto.",
-          datos: ["saldoAntes vivo (1250 en semilla)", "saldo vivo tras acreditar (3250.00 en semilla)", "cuota=394", "credito.fechaPrimeraCuota=1 de agosto"] },
+          // en defaults renderiza byte-idéntico al validado: "Deposité Q2,000 ... de Q1,250 a Q3,250.00 ... Q394 ... 1 de agosto"
+          texto: "¡Listo! Deposité **{{monto|Q0}}** en tu monedero. Tu saldo pasó de {{saldoAntes|Q0}} a **{{saldo|Q2}}**. Tu primera cuota de {{cuota|Q0}} vence el {{fechaPrimeraCuota}}.",
+          datos: ["monto=2000", "saldoAntes=1250", "saldo=3250.00", "cuota=394", "fechaPrimeraCuota=1 de agosto"] },
       ],
-      transiciones: [], // fin del flujo; el motor ofrece volver al menú
+      // efectos al entrar (disparados por rostroOk): crea el crédito con toda la evidencia y acredita
+      efectosAlEntrar: [
+        { op: "crearCredito", monto: "$monto", frecuencia: "$frecuencia", pagos: "$pagos",
+          tasaMensual: 0.05, cuota: "$cuota", total: "$total", intereses: "$intereses",
+          primeraCuotaVence: "credito.fechaPrimeraCuota", metodoPago: "credito.metodoPago",
+          firma: "$firmaDataURL", declaraciones: "$declaracionesRegistradas", biometria: "$biometriaOk" },
+        { op: "acreditarMonedero", monto: "$monto", concepto: "Préstamo abonado" },
+      ],
+      transiciones: [{ cuando: { porDefecto: true }, irA: "comprobante" }],
+    },
+
+    // ── Comprobante (nuevo · #6) ─────────────────────────────
+    comprobante: {
+      id: "comprobante", final: true,
+      alEntrar: [
+        { tipo: "burbuja", texto: "Acá está tu comprobante:" },
+        { tipo: "tarjeta", tarjeta: {
+            titulo: "**Préstamo depositado**",
+            fechaHora: "{{fechaDesembolso}} · {{horaDesembolso}}",
+            destacado: { etiqueta: "Total a pagar", valor: "**{{total|Q2}}**", sub: "Monto solicitado {{monto|Q0}}" },
+            filas: [
+              { etiqueta: "Facturar a", valor: "José Manuel García López" },
+              { etiqueta: "DPI", valor: "2547 89632 0101" },
+              { etiqueta: "Intereses", valor: "{{intereses|Q2}}" },
+              { etiqueta: "Cantidad de cuotas", valor: "{{pagos}} pagos de {{cuota|Q2}}" },
+              { etiqueta: "Forma de pago", valor: "Débito mensual automático" },
+              { etiqueta: "Fecha de primera cuota", valor: "{{fechaPrimeraCuota}}" },
+            ],
+            firma: "$firmaDataURL",
+            acciones: [ { label: "Descargar", op: "descargarComprobante" }, { label: "Compartir", op: "compartirComprobante" } ],
+        }, datos: ["credito.fechaDesembolso", "credito.horaDesembolso", "usuario.nombreCompleto", "usuario.dpi", "firma guardada"] },
+      ],
+      transiciones: [],
     },
 
   },
@@ -196,59 +281,56 @@ const flujoCredito: Flujo = {
 
 ---
 
-## 5. Cálculo de cuota (defensa del realismo)
-
-Las cuotas **no están inventadas**: son amortización francesa (cuota fija) al 5% mensual. Operación en el modelo de datos:
+## 6. Cálculo de cuota (con frecuencia · defensa del realismo)
 
 ```
-calcularCuota(P, n, i = credito.tasaMensual):
-    cuota = P · i / (1 − (1 + i)^(−n))
-    → redondear a entero (Quetzal)
+tasaPeriodo = credito.tasaMensual × frecuencia.mesesPorPeriodo
+cuota       = calcularCuota(monto, pagos, tasaPeriodo)   // amortización francesa
+total       = cuota × pagos
+intereses   = total − monto
 ```
 
-Verificación con P = Q2,000, i = 0.05:
+Verificación del **camino de oro** (monto Q2,000, Mensual → mesesPorPeriodo 1 → tasaPeriodo 5%):
 
-| Plazo (n) | Fórmula | Cuota |
+| Pagos | Cuota | Total | Intereses |
+|---|---|---|---|
+| 3 | Q734 | Q2,202 | Q202 |
+| **6 (default)** | **Q394** | **Q2,364** | **Q364** |
+| 12 | Q226 | Q2,712 | Q712 |
+
+El default reproduce la cuota validada **Q394**. Semanal/Quincenal recalculan con su `tasaPeriodo` (2.5% quincenal, 1.25% semanal); esos valores no son copy validado, pero son deterministas y defendibles.
+
+---
+
+## 7. Efectos sobre el mock
+
+| Momento | Operación | Resultado |
 |---|---|---|
-| 3 meses | 2000·0.05 / (1 − 1.05⁻³) | **Q734** ✓ |
-| 6 meses | 2000·0.05 / (1 − 1.05⁻⁶) | **Q394** ✓ |
-| 12 meses | 2000·0.05 / (1 − 1.05⁻¹²) | **Q226** ✓ |
+| Firmar contrato | `firmarContrato()` | guarda el trazo de firma (dataURL en memoria) |
+| Declarar | `registrarDeclaraciones()` | guarda `{ tyc:true, pep_us_cpe:true, ts }` (rastro de auditoría) |
+| Biometría | `capturarBiometria()` + `autenticar()` | marca rostro validado; `sesion.autenticada=true` |
+| Desembolso | `crearCredito({...})` | agrega a `creditos[]` con monto, frecuencia, pagos, cuota, total, saldoPendiente=total, pagado=0, firma, declaraciones, biometria |
+| Desembolso | `acreditarMonedero(monto,"Préstamo abonado")` | saldo 1250 → **3250.00**; agrega movimiento "Préstamo abonado +Q2,000.00" |
 
-Coinciden exactamente con el copy validado. Para el demo determinista, el motor puede leer `calcularCuota` **o** una tabla precomputada en el mock; ambas dan el mismo resultado.
-
----
-
-## 6. Efectos sobre el mock
-
-| Efecto | Operación | Antes → Después |
-|---|---|---|
-| Desembolso | `acreditarMonedero(2000)` | `monedero.saldo` 1250.00 → **3250.00** |
-| Crédito creado | `crearCredito({...})` | agrega registro a `creditos[]`: `{ monto:2000, plazoMeses:6, tasaMensual:0.05, cuota:394, primeraCuotaVence:"1 de agosto", saldoPendiente:2000 }` |
-
-- El nuevo saldo **persiste en la sesión**: al abrir luego el flujo `monedero` (B1), debe mostrar Q3,250.00.
-- `fechaPrimeraCuota` se guarda como constante de demo (`"1 de agosto"`) para que el copy quede verbatim. En producción sería el 1.º del mes siguiente; aquí se fija para determinismo.
-- **Reiniciar demo** revierte: saldo → Q1,250.00 y `creditos[]` → vacío.
+Reiniciar demo revierte saldo, vacía `creditos[]` y limpia sesión/firma/declaraciones.
 
 ---
 
-## 7. Decisiones del molde a validar (Carlos)
+## 8. Componentes de UI nuevos (ver `02-design-system.md`)
 
-Puntos donde el molde tomó un default razonable; confirmar antes de replicar a los otros seis:
-
-- **(a) Fuente de ingreso.** Se ofrece un solo botón validado ("Recibo una remesa del exterior"), porque el usuario sembrado tiene remesa y la evaluación (D2) se apoya en ella. ¿Dejamos solo ese camino, o agregamos "Salario"/"Negocio" con una rama alterna? (Recomiendo dejar solo remesa para mantener el copy 100% validado.)
-- **(b) Monto seleccionable.** El default es Q2,000 (camino validado) con botones Q1,000/Q3,000 y texto libre habilitados; otros montos recalculan la cuota vía `calcularCuota`. Alternativa: fijar únicamente Q2,000. (Recomiendo dejar seleccionable: da realismo sin salir del mock.)
-- **(c) Copy de plazos no-validado.** El pie "Con 6 meses…" es validado literal. Si el usuario cambia a 3 o 12 meses, se genera el mismo patrón con el plazo/cuota correspondientes. Es una *parametrización* del patrón validado, no una reescritura — confirmar que es aceptable.
+`Slider`, `SelectorSegmentado` (frecuencia y N.º de pagos), `SignaturePad` (canvas de firma con el dedo), `BiometricCapture` (círculo + progreso, simulado), `ContratoCard`, `DeclaracionesCard` (checklist + info expandible), `ComprobanteCard` (descargable/compartible, PDF simulado).
 
 ---
 
-## 8. Criterios de aceptación
+## 9. Criterios de aceptación
 
-1. Escribir "necesito un préstamo" (o tocar el CTA del menú) inicia el flujo; si la sesión no está autenticada, primero corre el gate `acceso` (A10) y luego reanuda en `solicitud`.
-2. Chispa saluda con el nombre real del mock ("José") y pregunta la fuente de ingresos.
-3. Al indicar remesa (botón o texto con "remesa/hermano/exterior"), Chispa muestra ingreso promedio **Q2,325** y línea **Q3,000**, ambos leídos del mock (no fijos en la vista).
-4. El monto Q2,000 genera la oferta con cuotas 3m **Q734** / 6m **Q394** / 12m **Q226**, con 6 meses preseleccionado; cambiar de plazo actualiza la cuota mostrada.
-5. Al aceptar, el saldo sube de **Q1,250** a **Q3,250.00** y el cambio **persiste**: se ve en el flujo `monedero` (B1) sin reiniciar.
-6. Se crea un crédito con cuota **Q394** y primera cuota **1 de agosto**; el mensaje final reproduce el copy validado **carácter por carácter** (incluida la mezcla Q1,250 / Q3,250.00).
-7. "Reiniciar demo" devuelve el saldo a **Q1,250.00** y vacía `creditos[]`.
-8. Aparece "escribiendo…" antes de cada burbuja de Chispa, con delay pequeño; todo determinista (sin IA en vivo).
-9. Ninguna cadena de Chispa fue reescrita respecto al copy validado (§3).
+1. D1 y D2 conservan su copy validado carácter por carácter.
+2. El configurador abre con Q2,000 / Mensual / 6 pagos y muestra **Cuota Q394**, **Total a pagar Q2,364**, "Q2,000 + Q364 de intereses"; mover slider/frecuencia/pagos recalcula en vivo.
+3. La confirmación resume monto, intereses, total, 6 pagos de Q394, primer pago 1 de agosto y método de pago (débito automático + pago adelantado), con acceso al contrato.
+4. El contrato se muestra y **se firma con el dedo** (canvas real); sin firma no avanza. La firma aparece luego en el comprobante.
+5. Las **declaraciones PEP/US/CPE + T&C** son obligatorias (no avanza sin ambas), con info expandible; se registran con timestamp (auditoría IVE).
+6. La **biometría** (simulada) autoriza el préstamo y autentica la sesión; no requiere A10 aparte.
+7. El desembolso reproduce el copy validado en el camino de oro (saldo 1250 → 3250.00, cuota Q394, 1 de agosto) y el saldo **persiste** (visible en Monedero).
+8. El **comprobante** muestra fecha/hora, total, monto, DPI, intereses, cuotas, forma de pago, primera cuota y la firma; Descargar/Compartir simulan PDF.
+9. Tras el desembolso, el crédito queda **activo y pagable** desde Monedero (ver `monedero.md`, #8).
+10. Determinista; firma y rostro son simulados (sin cámara ni backend).

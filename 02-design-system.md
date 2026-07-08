@@ -70,3 +70,39 @@ Determinista y tolerante, para que escribir también funcione:
 - Match por **inclusión** de cualquiera de las `keywords` del estado.
 - Números: extraer dígitos para montos (ej. "quiero 2000" → 2000), validar contra la línea/saldo.
 - Si nada calza: repregunta suave y mantiene el estado (no rompe la demo).
+
+---
+
+## Componentes del flujo de crédito (estilo ZIGI, dentro del chat)
+
+Se renderizan como tarjetas dentro de burbujas de Chispa. Todos simulados, deterministas, sin backend ni cámara.
+
+### `Slider`
+Selector de monto. Props: `min`, `max`, `paso`, `valor`, `formato` (Q0). Muestra el valor grande arriba (ej. **Q2,000**). Al arrastrar, dispara `recalcularOferta` y actualiza el resumen en vivo. Riel en `wa-brand`.
+
+### `SelectorSegmentado`
+Píldoras mutuamente excluyentes para **frecuencia** (Semanal / Quincenal / Mensual) y **N.º de pagos** (opciones según la frecuencia). La opción activa va con fondo/borde `wa-brand`. Cambiar cualquiera dispara `recalcularOferta`.
+
+### `ResumenOferta`
+Bloque de costo transparente bajo el configurador: **Cuota {{cuota}} / {{unidad}}**, **Total a pagar {{total}}**, y nota "{{monto}} + {{intereses}} de intereses (5% mensual)".
+
+### `ConfirmacionCard`
+Tarjeta "Confirmá tu préstamo": filas etiqueta→valor (monto con acción **Editar**, intereses, total, solicitante, pagos, fecha primer pago), bloque **Método de pago** (débito automático + pago adelantado con check `wa-brand`) y fila-enlace **Ver contrato del préstamo** con chevron.
+
+### `ContratoCard`
+Tarjeta con el resumen del contrato (formas de pago · costo · documentos por correo) y, embebido, el `SignaturePad`.
+
+### `SignaturePad`
+**Canvas real** donde el usuario firma con el dedo (touch) o mouse. Trazo en tinta oscura sobre fondo claro, botón "Borrar". El botón "Firmar y continuar" se habilita solo cuando hay trazo. Al firmar, se guarda el `dataURL` en memoria y luego se muestra en el comprobante. (Es el "plus" de Chispa.)
+
+### `DeclaracionesCard`
+Checklist con dos casillas obligatorias (T&C y PEP/US/CPE). Junto a la segunda, enlaces de info **¿Qué es PEP?** / **¿U.S. Person?** / **¿CPE?** que abren un popover con el texto de `credito.infoDeclaraciones`. El botón "Acepto y declaro" se habilita al marcar ambas.
+
+### `BiometricCapture`
+Simulación de captura facial estilo ZIGI: marco circular con anillo de progreso animado. No usa cámara. El botón "Validar mi rostro" corre la animación (determinista, ~1.5 s) y termina en éxito → "¡Identidad confirmada con RENAP!".
+
+### `ComprobanteCard`
+Comprobante "Préstamo depositado": encabezado con check verde y fecha/hora, bloque destacado (Total a pagar + Monto solicitado), filas de detalle (Facturar a, DPI, Intereses, Cuotas, Forma de pago, Primera cuota), la **firma** renderizada, y botones **Descargar** / **Compartir** (PDF simulado, muestra un aviso).
+
+### `CreditoActivoCard` (para Monedero · #8)
+Tarjeta de deuda viva: "Tu crédito", **Debés {{saldoPendiente}}**, **Pagaste {{pagado}}**, barra de progreso, próxima cuota y fecha, botón **Pagar cuota** → `pagarCuota`.
