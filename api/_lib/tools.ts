@@ -24,10 +24,15 @@ export const toolSchemas: ToolFn[] = [
   fn("datosCredito", "Devuelve los datos para evaluar un crédito: ingreso promedio del usuario, línea aprobada, tasa mensual y plazos. Úsalo SIEMPRE antes de ofrecer un crédito; nunca inventes estos números.", {}),
 
   // ── Cálculo ──
-  fn("calcularCuota", "Calcula la cuota mensual (amortización francesa) para un monto y plazo.", {
+  fn("calcularCuota", "Calcula la cuota mensual (amortización francesa) para un monto y plazo en meses.", {
     monto: { type: "number", description: "Monto del crédito en quetzales." },
     plazoMeses: { type: "number", description: "Plazo en meses (3, 6 o 12)." },
   }, ["monto", "plazoMeses"]),
+  fn("calcularCuotaFrecuencia", "Calcula cuota, total a pagar e intereses de un préstamo según la FRECUENCIA de pago (semanal/quincenal/mensual) y el número de pagos. Úsalo para el configurador ZIGI. Nunca inventes estos números.", {
+    monto: { type: "number", description: "Monto del crédito en quetzales." },
+    frecuenciaId: { type: "string", description: "'mensual' | 'quincenal' | 'semanal'." },
+    pagos: { type: "number", description: "Número de pagos elegido." },
+  }, ["monto", "frecuenciaId", "pagos"]),
 
   // ── Mutación de saldo ──
   fn("acreditarMonedero", "Acredita (suma) un monto al monedero y registra el movimiento. Requiere confirmación previa del usuario.", {
@@ -67,12 +72,25 @@ export const toolSchemas: ToolFn[] = [
     cuotaMensual: { type: "number", description: "Cuota mensual validada." },
   }, ["monto", "cuotas", "cuotaMensual"]),
 
-  // ── Crédito ──
-  fn("crearCredito", "Crea un crédito y desembolsa el monto al monedero. Confirmar antes. Usar la cuota de calcularCuota.", {
+  // ── Crédito (flujo ZIGI) ──
+  fn("mostrarConfigurador", "Abre en la pantalla el configurador del préstamo (slider de monto + frecuencia + número de pagos). Llámalo cuando el usuario vaya a elegir cuánto necesita. Espera a que el usuario elija y continúe.", {}),
+  fn("mostrarContrato", "Muestra el contrato del préstamo para que el usuario lo firme con el dedo. Espera a que confirme la firma antes de seguir.", {}),
+  fn("mostrarDeclaraciones", "Muestra las declaraciones obligatorias (PEP/US/CPE y Términos y Condiciones) que exige la ley. Espera a que el usuario acepte y declare.", {}),
+  fn("crearCredito", "Crea el crédito y desembolsa el monto al monedero. Llámalo SOLO tras la confirmación, el contrato firmado, las declaraciones y la validación biométrica. Usa la cuota de calcularCuota/calcularCuotaFrecuencia.", {
     monto: { type: "number" },
-    plazoMeses: { type: "number" },
-    cuota: { type: "number", description: "Cuota mensual (de calcularCuota)." },
-  }, ["monto", "plazoMeses", "cuota"]),
+    cuota: { type: "number", description: "Cuota por período (de calcularCuota/calcularCuotaFrecuencia)." },
+    plazoMeses: { type: "number", description: "Plazo en meses (si aplica el flujo por meses)." },
+    frecuenciaId: { type: "string", description: "'mensual' | 'quincenal' | 'semanal' (flujo ZIGI)." },
+    pagos: { type: "number", description: "Número de pagos (flujo ZIGI)." },
+    total: { type: "number", description: "Total a pagar (cuota × pagos)." },
+    intereses: { type: "number", description: "Intereses (total − monto)." },
+  }, ["monto", "cuota"]),
+  fn("generarComprobante", "Devuelve los datos del comprobante del último préstamo desembolsado (para la tarjeta 'Préstamo depositado').", {
+    creditoId: { type: "number", description: "Índice del crédito (opcional; por defecto el último)." },
+  }),
+  fn("pagarCuota", "Paga una cuota del crédito activo (baja el saldo y avanza el progreso de pago). Confirmar antes.", {
+    creditoId: { type: "number", description: "Índice del crédito activo (opcional; por defecto el primero)." },
+  }),
 
   // ── Engagement ──
   fn("acreditarReferido", "Acredita el premio por referido al monedero.", {}),
@@ -98,6 +116,7 @@ export function ejecutarTool(nombre: string, args: Record<string, unknown>, esta
     case "remesaDisponible": return op.remesaDisponible(estado);
     case "datosCredito": return op.datosCredito(estado);
     case "calcularCuota": return op.calcularCuota(estado, a);
+    case "calcularCuotaFrecuencia": return op.calcularCuotaFrecuencia(estado, a);
     case "acreditarMonedero": return op.acreditarMonedero(estado, a);
     case "debitarMonedero": return op.debitarMonedero(estado, a);
     case "cobrarRemesa": return op.cobrarRemesa(estado);
@@ -106,7 +125,12 @@ export function ejecutarTool(nombre: string, args: Record<string, unknown>, esta
     case "recargar": return op.recargar(estado, a);
     case "pagarComercioConSaldo": return op.pagarComercioConSaldo(estado, a);
     case "pagarComercioEnCuotas": return op.pagarComercioEnCuotas(estado, a);
+    case "mostrarConfigurador": return op.mostrarConfigurador(estado);
+    case "mostrarContrato": return op.mostrarContrato(estado);
+    case "mostrarDeclaraciones": return op.mostrarDeclaraciones(estado);
     case "crearCredito": return op.crearCredito(estado, a);
+    case "generarComprobante": return op.generarComprobante(estado, a);
+    case "pagarCuota": return op.pagarCuota(estado, a);
     case "acreditarReferido": return op.acreditarReferido(estado);
     case "acreditarCashback": return op.acreditarCashback(estado);
     case "validarDPI": return op.validarDPI(estado, a);

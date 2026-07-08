@@ -4,11 +4,12 @@
 // la cadena exacta sin re-formatear. Las de mutación cambian `estado` en sitio.
 import type { Estado } from "../../shared/estado";
 import { fmtQ0, fmtQ2 } from "../../shared/formato.js";
+import { resumenOferta, buscarFrecuencia } from "../../shared/credito.js";
 
 const norm = (s: string) =>
-  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+  s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
 
-// ── Lectura ────────────────────────────────────────────────────────────────
+// ── Lectura ──────────────────────────────────────────────────────────────────
 
 export function leerSaldo(e: Estado) {
   return { saldo: e.monedero.saldo, saldoQ0: fmtQ0(e.monedero.saldo), saldoQ2: fmtQ2(e.monedero.saldo) };
@@ -80,7 +81,7 @@ export function remesaDisponible(e: Estado) {
   };
 }
 
-// ── Cálculo ──────────────────────────────────────────────────────────────
+// ── Cálculo ──────────────────────────────────────────────────────────────────
 
 // Datos para evaluar el crédito (ingreso promedio, línea aprobada, tasa, plazos).
 // Todos salen del mock, para que la IA NUNCA los invente.
@@ -97,7 +98,7 @@ export function datosCredito(e: Estado) {
   };
 }
 
-/** Amortización francesa (cuota fija). Redondeo a entero Q. */
+/** Amortización francesa (cuota fija) por PLAZO EN MESES. Redondeo a entero Q. */
 export function calcularCuota(e: Estado, args: { monto: number; plazoMeses: number; tasaMensual?: number }) {
   const i = args.tasaMensual ?? e.credito.tasaMensual;
   const P = args.monto;
@@ -106,7 +107,7 @@ export function calcularCuota(e: Estado, args: { monto: number; plazoMeses: numb
   return { monto: P, plazoMeses: n, tasaMensual: i, cuota, cuotaQ0: fmtQ0(cuota) };
 }
 
-// ── Mutación de saldo ────────────────────────────────────────────────────
+// ── Mutación de saldo ────────────────────────────────────────────────────────
 
 // "Hoy" del demo sale del mock (_meta.hoy = "30 jun"); determinista, sin Date.
 function hoy(e: Estado): string {
@@ -146,7 +147,7 @@ export function debitarMonedero(e: Estado, args: { monto: number; concepto: stri
   };
 }
 
-// ── Remesa ────────────────────────────────────────────────────────────────
+// ── Remesa ───────────────────────────────────────────────────────────────────
 
 export function cobrarRemesa(e: Estado) {
   if (!e.remesa.disponible) return { ok: false, motivo: "sin_remesa_disponible" };
@@ -157,7 +158,7 @@ export function cobrarRemesa(e: Estado) {
   return { ...r, ok: true, montoUsd: d.montoUsd, remitente: d.remitente, acreditadoQ2: fmtQ2(q) };
 }
 
-// ── Servicios / envíos / recargas ─────────────────────────────────────────
+// ── Servicios / envíos / recargas ────────────────────────────────────────────
 
 export function pagarServicio(e: Estado, args: { id?: string; identificador?: string }) {
   const idx = e.serviciosPendientes.findIndex(
@@ -190,7 +191,7 @@ export function recargar(e: Estado, args: { operadorId?: string; operador?: stri
   return { ...r, ok: true, operador: op.nombre, recargadoQ2: fmtQ2(args.monto) };
 }
 
-// ── Chispa Pay ────────────────────────────────────────────────────────────
+// ── Chispa Pay ───────────────────────────────────────────────────────────────
 
 export function pagarComercioConSaldo(e: Estado, args: { monto: number }) {
   const r = debitarMonedero(e, { monto: args.monto, concepto: "Compra · " + e.comercio.nombre });
@@ -217,20 +218,48 @@ export function pagarComercioEnCuotas(e: Estado, args: { monto: number; cuotas: 
   };
 }
 
-// ── Crédito ────────────────────────────────────────────────────────────────
+// ── Crédito ──────────────────────────────────────────────────────────────────
 
 export function crearCredito(
   e: Estado,
-  args: { monto: number; plazoMeses: number; cuota: number; tasaMensual?: number }
+  args: {
+    monto: number;
+    plazoMeses?: number;
+    cuota: number;
+    tasaMensual?: number;
+    // ── ZIGI (opcionales) ──
+    frecuenciaId?: string;
+    pagos?: number;
+    total?: number;
+    intereses?: number;
+  }
 ) {
   const tasa = args.tasaMensual ?? e.credito.tasaMensual;
+  const pagos = args.pagos ?? args.plazoMeses ?? 0;
+  const total = args.total ?? args.cuota * pagos;
+  const intereses = args.intereses ?? total - args.monto;
+  const f = args.frecuenciaId ? buscarFrecuencia(e, args.frecuenciaId) : undefined;
+  // Firma y declaraciones las deja el cliente en la sesión (widgets de la UI).
+  const s = e.sesion as {
+    firmaContrato?: string;
+    declaraciones?: { tyc: boolean; pep_us_cpe: boolean; ts: string };
+  };
   e.creditos.push({
     monto: args.monto,
-    plazoMeses: args.plazoMeses,
+    plazoMeses: args.plazoMeses ?? pagos,
     tasaMensual: tasa,
     cuota: args.cuota,
     primeraCuotaVence: e.credito.fechaPrimeraCuota,
-    saldoPendiente: args.monto,
+    saldoPendiente: total > 0 ? total : args.monto,
+    frecuenciaId: args.frecuenciaId,
+    unidad: f?.unidad,
+    pagos,
+    total,
+    intereses,
+    pagado: 0,
+    firma: s.firmaContrato,
+    declaraciones: s.declaraciones,
+    biometria: e.sesion.autenticada === true ? { ok: true, ts: new Date().toISOString() } : undefined,
   });
   const r = acreditarMonedero(e, { monto: args.monto, concepto: "Desembolso de crédito" });
   return {
@@ -238,11 +267,105 @@ export function crearCredito(
     ok: true,
     desembolsadoQ0: fmtQ0(args.monto),
     cuotaQ0: fmtQ0(args.cuota),
+    totalQ2: fmtQ2(total),
+    interesesQ2: fmtQ2(intereses),
+    pagos,
     primeraCuotaVence: e.credito.fechaPrimeraCuota,
   };
 }
 
-// ── Engagement ───────────────────────────────────────────────────────────
+// ── Crédito estilo ZIGI: cálculo, widgets, comprobante y pago de cuota ────────
+
+/** Cuota/total/intereses según FRECUENCIA (semanal/quincenal/mensual). Grounding del configurador. */
+export function calcularCuotaFrecuencia(e: Estado, args: { monto: number; frecuenciaId: string; pagos: number }) {
+  const r = resumenOferta(e, args.monto, args.frecuenciaId, args.pagos);
+  return {
+    ...r,
+    montoQ0: fmtQ0(r.monto),
+    cuotaQ0: fmtQ0(r.cuota),
+    totalQ2: fmtQ2(r.total),
+    interesesQ2: fmtQ2(r.intereses),
+  };
+}
+
+/** Abre el configurador de préstamo en la UI (slider + frecuencia + N.º de pagos). */
+export function mostrarConfigurador(e: Estado) {
+  return {
+    uiAccion: "configurador",
+    montoMin: e.credito.montoMin ?? 100,
+    montoMax: e.credito.montoMax ?? e.credito.lineaAprobada,
+    montoDefault: e.credito.montoDefault ?? 2000,
+    frecuencias: e.credito.frecuencias ?? [],
+    frecuenciaDefault: e.credito.frecuenciaDefault ?? "mensual",
+    tasaMensual: e.credito.tasaMensual,
+    nota: "Se está mostrando el configurador del préstamo (monto, frecuencia y número de pagos). Espera a que el usuario elija y continúe.",
+  };
+}
+
+/** Muestra el contrato para firmar con el dedo. */
+export function mostrarContrato(e: Estado) {
+  return {
+    uiAccion: "contratoFirma",
+    contrato: e.credito.contratoResumen ?? null,
+    nota: "Se está mostrando el contrato para que el usuario lo firme con el dedo. Espera a que confirme la firma.",
+  };
+}
+
+/** Muestra las declaraciones obligatorias (PEP/US/CPE + T&C). */
+export function mostrarDeclaraciones(e: Estado) {
+  return {
+    uiAccion: "declaraciones",
+    declaraciones: e.credito.declaracionesRequeridas ?? [],
+    info: e.credito.infoDeclaraciones ?? null,
+    nota: "Se están mostrando las declaraciones PEP/US/CPE y los Términos y Condiciones. Espera a que el usuario acepte y declare.",
+  };
+}
+
+/** Datos del comprobante del último crédito (para la tarjeta 'Préstamo depositado'). */
+export function generarComprobante(e: Estado, args: { creditoId?: number }) {
+  const idx = args.creditoId ?? e.creditos.length - 1;
+  const c = e.creditos[idx];
+  if (!c) return { ok: false, motivo: "sin_credito" };
+  return {
+    ok: true,
+    titulo: "Préstamo depositado",
+    fecha: e.credito.fechaDesembolso ?? hoy(e),
+    hora: e.credito.horaDesembolso ?? "",
+    facturarA: e.usuario.nombreCompleto,
+    dpi: e.usuario.dpi,
+    montoQ0: fmtQ0(c.monto),
+    totalQ2: fmtQ2(c.total ?? c.monto),
+    interesesQ2: fmtQ2(c.intereses ?? 0),
+    pagos: c.pagos ?? c.plazoMeses,
+    cuotaQ2: fmtQ2(c.cuota),
+    formaPago: e.credito.metodoPago ?? "Débito mensual automático",
+    primeraCuotaVence: c.primeraCuotaVence,
+    tieneFirma: Boolean(c.firma),
+  };
+}
+
+/** Paga una cuota del crédito activo (baja el saldo y avanza el progreso). */
+export function pagarCuota(e: Estado, args: { creditoId?: number }) {
+  const c = e.creditos[args.creditoId ?? 0];
+  if (!c) return { ok: false, motivo: "sin_credito_activo" };
+  const pendiente = c.saldoPendiente;
+  if (pendiente <= 0) return { ok: false, motivo: "credito_ya_pagado" };
+  const pago = Math.min(c.cuota, pendiente);
+  const r = debitarMonedero(e, { monto: pago, concepto: "Pago de cuota crédito" });
+  if (!r.ok) return r;
+  c.pagado = (c.pagado ?? 0) + pago;
+  c.saldoPendiente -= pago;
+  return {
+    ...r,
+    ok: true,
+    pagoCuotaQ2: fmtQ2(pago),
+    pagadoTotalQ2: fmtQ2(c.pagado),
+    pendienteQ2: fmtQ2(c.saldoPendiente),
+    liquidado: c.saldoPendiente <= 0,
+  };
+}
+
+// ── Engagement ───────────────────────────────────────────────────────────────
 
 export function acreditarReferido(e: Estado) {
   const r = acreditarMonedero(e, { monto: e.engagement.premioReferido, concepto: "Premio referido" });
@@ -254,7 +377,7 @@ export function acreditarCashback(e: Estado) {
   return { ...r, ok: true, cashbackQ0: fmtQ0(e.engagement.cashbackMes) };
 }
 
-// ── Sesión ────────────────────────────────────────────────────────────────
+// ── Sesión ───────────────────────────────────────────────────────────────────
 
 // Paso 1 de la ceremonia: valida el número de DPI contra el del mock.
 // Compara solo dígitos (tolera espacios/guiones). NO autentica todavía.
